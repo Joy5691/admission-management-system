@@ -183,7 +183,7 @@ export function ClassSeatMap({
         <button onClick={onBack} className="btn btn-outline" style={styles.backBtn} type="button">
           ← Back to All Classes
         </button>
-        <span style={styles.liveBadge}>⚡ Live Seat Matrix (Updates every 3s)</span>
+        
       </div>
 
       {/* Class Hero Banner */}
@@ -195,9 +195,7 @@ export function ClassSeatMap({
               <span style={styles.shiftBadge}>{currentClass.name}</span>
             </div>
             <h1 style={styles.heroTitle}>{currentClass.name}</h1>
-            <p style={styles.heroSubtitle}>
-              Interactive Classroom Layout • Click any available green seat or use the Apply button to hold a seat.
-            </p>
+            
           </div>
 
           <div style={styles.heroRight}>

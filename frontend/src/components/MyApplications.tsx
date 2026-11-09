@@ -6,11 +6,13 @@ interface Props {
   studentId: string;
   onViewHold: (holdId: string) => void;
   onGoToClasses?: () => void;
+  onUpdateStudentId?: (id: string) => void;
 }
 
 type Filter = 'ALL' | 'HELD' | 'CONFIRMED' | 'TERMINAL';
 
-export function MyApplications({ studentId, onViewHold, onGoToClasses }: Props) {
+export function MyApplications({ studentId, onViewHold, onGoToClasses, onUpdateStudentId }: Props) {
+  const [searchIdInput, setSearchIdInput] = useState('');
   const [holds, setHolds] = useState<MyHold[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -50,13 +52,53 @@ export function MyApplications({ studentId, onViewHold, onGoToClasses }: Props) 
 
   if (!studentId) {
     return (
-      <div style={styles.container}>
+      <div style={styles.container} className="animate-fade-in">
         <div style={styles.warnCard} className="card">
-          <span style={styles.warnIcon}>🪪</span>
-          <h3 style={styles.warnTitle}>Student Identification Required</h3>
+          <span style={styles.warnIcon}>🎓</span>
+          <h3 style={styles.warnTitle}>Find Your Applications</h3>
           <p style={styles.warnText}>
-            Please enter your 17-digit birth registration number in the top bar to view your submitted applications and confirmed admissions.
+            Enter your 17-digit Birth Registration Number to view your held seats, payment status, and confirmed admissions.
           </p>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              const clean = searchIdInput.trim();
+              if (clean.length === 17 && /^\d{17}$/.test(clean) && onUpdateStudentId) {
+                localStorage.setItem('studentId', clean);
+                onUpdateStudentId(clean);
+              }
+            }}
+            style={{ display: 'flex', gap: '0.65rem', maxWidth: 440, width: '100%', margin: '1.25rem auto 0', flexWrap: 'wrap' }}
+          >
+            <input
+              type="text"
+              maxLength={17}
+              value={searchIdInput}
+              onChange={(e) => setSearchIdInput(e.target.value.replace(/\D/g, ''))}
+              placeholder="Enter 17-digit Student ID..."
+              style={{
+                flex: '1 1 240px',
+                padding: '0.75rem 1rem',
+                border: '1.5px solid var(--slate-300)',
+                borderRadius: 'var(--radius-md)',
+                fontFamily: 'var(--font-mono)',
+                fontSize: '0.95rem',
+                outline: 'none',
+              }}
+              autoFocus
+            />
+            <button
+              type="submit"
+              disabled={searchIdInput.length !== 17}
+              className="btn btn-primary"
+              style={{ padding: '0.75rem 1.25rem' }}
+            >
+              Search Applications →
+            </button>
+          </form>
+          <span style={{ fontSize: '0.75rem', color: 'var(--slate-400)', marginTop: '0.5rem', display: 'block', fontFamily: 'var(--font-mono)' }}>
+            {searchIdInput.length} / 17 digits
+          </span>
         </div>
       </div>
     );
@@ -84,6 +126,27 @@ export function MyApplications({ studentId, onViewHold, onGoToClasses }: Props) 
           <h1 style={styles.title}>My Applications</h1>
           <p style={styles.subtitle}>
             Student ID: <code style={styles.idCode}>{studentId}</code>
+            {onUpdateStudentId && (
+              <button
+                type="button"
+                onClick={() => {
+                  localStorage.removeItem('studentId');
+                  onUpdateStudentId('');
+                }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--primary)',
+                  fontSize: '0.775rem',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                  marginLeft: '0.5rem',
+                  textDecoration: 'underline',
+                }}
+              >
+                Switch Student ID
+              </button>
+            )}
           </p>
         </div>
 

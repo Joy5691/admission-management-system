@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { StudentIdBar } from './components/StudentIdBar';
 import { ClassList } from './components/ClassList';
 import { ApplicationDetail } from './components/ApplicationDetail';
 import { MyApplications } from './components/MyApplications';
@@ -78,13 +77,27 @@ function App() {
             </div>
           </div>
 
-          {/* Student ID Center Box */}
-          <div style={styles.studentIdSection}>
-            <StudentIdBar studentId={studentId} onStudentIdChange={setStudentId} />
-          </div>
 
-          {/* Upper Right Corner: Admin Login / Profile */}
+
+          {/* Upper Right Corner: Student Pill & Admin Login / Profile */}
           <div style={styles.adminSection}>
+            {studentId && (
+              <div style={styles.studentActivePill}>
+                <span style={{ fontSize: '0.9rem' }}>🎓</span>
+                <span style={styles.studentPillText}>Student ID: {studentId}</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStudentId('');
+                    localStorage.removeItem(STUDENT_ID_KEY);
+                  }}
+                  style={styles.studentPillClear}
+                  title="Clear active Student ID"
+                >
+                  ✕
+                </button>
+              </div>
+            )}
             {isAdmin ? (
               <div style={styles.adminLoggedInRow}>
                 <button
@@ -189,6 +202,7 @@ function App() {
                   studentId={studentId}
                   onViewHold={handleViewHold}
                   onGoToClasses={() => setActiveTab('classes')}
+                  onUpdateStudentId={setStudentId}
                 />
               )}
 
@@ -326,6 +340,33 @@ const styles: Record<string, React.CSSProperties> = {
   adminSection: {
     display: 'flex',
     alignItems: 'center',
+    gap: '0.75rem',
+  },
+  studentActivePill: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '0.4rem',
+    background: 'var(--primary-light)',
+    border: '1px solid var(--primary-border)',
+    padding: '0.35rem 0.65rem',
+    borderRadius: 'var(--radius-full)',
+    fontFamily: 'var(--font-mono)',
+    fontSize: '0.775rem',
+    color: 'var(--primary-dark)',
+    fontWeight: 600,
+  },
+  studentPillText: {
+    letterSpacing: '0.2px',
+  },
+  studentPillClear: {
+    background: 'none',
+    border: 'none',
+    color: 'var(--primary)',
+    cursor: 'pointer',
+    fontSize: '0.75rem',
+    padding: '0.1rem 0.2rem',
+    lineHeight: 1,
+    opacity: 0.7,
   },
   adminLoggedInRow: {
     display: 'flex',

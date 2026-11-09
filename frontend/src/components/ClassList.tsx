@@ -7,7 +7,7 @@ interface ClassListProps {
   studentId: string;
   onApplied: (holdId: string) => void;
   onViewHold?: (holdId: string) => void;
-  onGoToCreate: () => void;
+  onGoToCreate?: () => void;
   onUpdateStudentId?: (id: string) => void;
   selectedClassId?: string | null;
   onSelectClass?: (id: string | null) => void;
@@ -32,15 +32,13 @@ export function ClassList({
 
   const [classes, setClasses] = useState<ClassInfo[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+    const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
 
   // Fetch classes
   const loadClasses = async (isInitial = false) => {
     if (isInitial) setLoading(true);
-    else setIsRefreshing(true);
-    try {
+        try {
       const data: ClassInfo[] = await apiFetch('/classes');
       setClasses(data);
       setError(null);
@@ -48,8 +46,7 @@ export function ClassList({
       if (isInitial) setError(friendlyError(err));
     } finally {
       if (isInitial) setLoading(false);
-      else setIsRefreshing(false);
-    }
+          }
   };
 
   useEffect(() => {
@@ -90,17 +87,7 @@ export function ClassList({
       {/* Top Banner & Stats */}
       <div style={styles.headerBanner}>
         <div>
-          <div style={styles.badgeRow}>
-            <span style={styles.liveIndicator}>
-              <span style={{ ...styles.liveDot, opacity: isRefreshing ? 0.3 : 1 }} />
-              Live Sync (4s)
-            </span>
-            <span style={styles.protocolBadge}>⚡ Real-Time First-Come, First-Served</span>
-          </div>
-          <h1 style={styles.title}>Academic Classes & Shift Modules</h1>
-          <p style={styles.subtitle}>
-            Explore open admission classes. Click any module to view live classroom seat visualization, hold an available seat, or resume a pending payment.
-          </p>
+          <h1 style={styles.title}>Student Admission</h1>
         </div>
 
         {/* Global Stats Pill Grid */}
@@ -144,14 +131,7 @@ export function ClassList({
           )}
         </div>
 
-        <button
-          onClick={onGoToCreate}
-          className="btn btn-outline"
-          style={styles.createBtn}
-          type="button"
-        >
-          ➕ Admin: Add Class
-        </button>
+        
       </div>
 
       {/* Error state */}
@@ -410,8 +390,8 @@ const styles: Record<string, React.CSSProperties> = {
   },
   searchWrapper: {
     position: 'relative',
-    flex: '1 1 320px',
-    maxWidth: 520,
+    flex: '1 1 100%',
+    maxWidth: 600,
     display: 'flex',
     alignItems: 'center',
   },
