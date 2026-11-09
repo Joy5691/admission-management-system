@@ -1,0 +1,25 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+*.userprefs
+*.lock.json
+appsettings.Development.json
+
+# Docker
+.dockerignore
+
+# Node / frontend
+node_modules/
+dist/
+build/
+.env.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# EF Core migrations bundle
+efbundle
