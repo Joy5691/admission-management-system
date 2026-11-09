@@ -55,17 +55,21 @@ export function ClassList({
     return () => clearInterval(interval);
   }, []);
 
-  // Filtered classes
-  const filtered = useMemo(() => {
-    if (!search.trim()) return classes;
-    const term = search.toLowerCase();
-    return classes.filter(c => c.name.toLowerCase().includes(term));
-  }, [classes, search]);
+  // Quick Filter Mode: ALL or OPEN seats only
+  const [filterMode, setFilterMode] = useState<'ALL' | 'OPEN'>('ALL');
 
-  const totalSeatsAll = classes.reduce((sum, c) => sum + c.totalSeats, 0);
-  const totalAvailableAll = classes.reduce((sum, c) => sum + c.availableSeats, 0);
-  const totalConfirmedAll = classes.reduce((sum, c) => sum + c.confirmedSeats, 0);
-  const totalHeldAll = classes.reduce((sum, c) => sum + c.heldSeats, 0);
+  const openClasses = useMemo(() => classes.filter(c => c.availableSeats > 0), [classes]);
+
+  const filtered = useMemo(() => {
+    let list = classes;
+    if (filterMode === 'OPEN') {
+      list = list.filter(c => c.availableSeats > 0);
+    }
+    if (!search.trim()) return list;
+    const term = search.toLowerCase();
+    return list.filter(c => c.name.toLowerCase().includes(term));
+  }, [classes, filterMode, search]);
+
 
   // If a class is selected, show its interactive seat map
   const activeClass = classes.find(c => c.id === selectedClassId);
@@ -84,38 +88,36 @@ export function ClassList({
 
   return (
     <div style={styles.container} className="animate-fade-in">
-      {/* Top Banner & Stats */}
+      {/* Top Banner & Suggested Classes */}
       <div style={styles.headerBanner}>
         <div>
           <h1 style={styles.title}>Student Admission</h1>
         </div>
 
-        {/* Global Stats Pill Grid */}
-        <div style={styles.statsGrid}>
-          <div style={styles.statPill}>
-            <span style={styles.statLabel}>Total Classes</span>
-            <span style={styles.statVal}>{classes.length}</span>
+        {/* Suggested Classes with Available Seats */}
+        {openClasses.length > 0 && (
+          <div style={styles.suggestedContainer}>
+            <span style={styles.suggestedLabel}>Suggested Classes with Open Seats:</span>
+            <div style={styles.suggestedPills}>
+              {openClasses.map(cls => (
+                <button
+                  key={cls.id}
+                  type="button"
+                  onClick={() => setSelectedClassId(cls.id)}
+                  style={styles.suggestedPill}
+                  title={`Select ${cls.name} (${cls.availableSeats} seats open)`}
+                >
+                  <span style={styles.suggestedDot} />
+                  <strong style={styles.suggestedName}>{cls.name}</strong>
+                  <span style={styles.suggestedBadge}>{cls.availableSeats} seats left</span>
+                </button>
+              ))}
+            </div>
           </div>
-          <div style={styles.statPill}>
-            <span style={styles.statLabel}>Total Capacity</span>
-            <span style={styles.statVal}>{totalSeatsAll}</span>
-          </div>
-          <div style={{ ...styles.statPill, background: 'var(--seat-avail-bg)', borderColor: 'var(--seat-avail-border)' }}>
-            <span style={{ ...styles.statLabel, color: 'var(--primary)' }}>Available Seats</span>
-            <span style={{ ...styles.statVal, color: 'var(--primary)' }}>{totalAvailableAll}</span>
-          </div>
-          <div style={{ ...styles.statPill, background: 'var(--seat-held-bg)', borderColor: 'var(--seat-held-border)' }}>
-            <span style={{ ...styles.statLabel, color: 'var(--warning-dark)' }}>Held</span>
-            <span style={{ ...styles.statVal, color: 'var(--warning-dark)' }}>{totalHeldAll}</span>
-          </div>
-          <div style={{ ...styles.statPill, background: 'var(--seat-conf-bg)', borderColor: 'var(--seat-conf-border)' }}>
-            <span style={{ ...styles.statLabel, color: 'var(--success-dark)' }}>Confirmed</span>
-            <span style={{ ...styles.statVal, color: 'var(--success-dark)' }}>{totalConfirmedAll}</span>
-          </div>
-        </div>
+        )}
       </div>
 
-      {/* Search & Actions Bar */}
+      {/* Search & Filter Bar */}
       <div style={styles.controlsBar}>
         <div style={styles.searchWrapper}>
           <span style={styles.searchIcon}>🔍</span>
@@ -131,7 +133,34 @@ export function ClassList({
           )}
         </div>
 
-        
+        <div style={styles.filterGroup}>
+          <button
+            type="button"
+            onClick={() => setFilterMode('ALL')}
+            style={{
+              ...styles.filterBtn,
+              background: filterMode === 'ALL' ? 'var(--primary)' : '#ffffff',
+              color: filterMode === 'ALL' ? '#ffffff' : 'var(--slate-700)',
+              borderColor: filterMode === 'ALL' ? 'var(--primary)' : 'var(--slate-300)',
+              fontWeight: filterMode === 'ALL' ? 700 : 500,
+            }}
+          >
+            All Classes ({classes.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setFilterMode('OPEN')}
+            style={{
+              ...styles.filterBtn,
+              background: filterMode === 'OPEN' ? 'var(--success-dark)' : '#ffffff',
+              color: filterMode === 'OPEN' ? '#ffffff' : 'var(--success-dark)',
+              borderColor: filterMode === 'OPEN' ? 'var(--success-dark)' : 'var(--success-border)',
+              fontWeight: filterMode === 'OPEN' ? 700 : 500,
+            }}
+          >
+            🟢 Open Seats Only ({openClasses.length})
+          </button>
+        </div>
       </div>
 
       {/* Error state */}
@@ -352,33 +381,67 @@ const styles: Record<string, React.CSSProperties> = {
     maxWidth: 640,
     lineHeight: 1.5,
   },
-  statsGrid: {
-    display: 'flex',
-    gap: '0.75rem',
-    flexWrap: 'wrap',
-  },
-  statPill: {
-    background: '#ffffff',
-    border: '1px solid var(--slate-200)',
-    padding: '0.65rem 1rem',
-    borderRadius: 'var(--radius-md)',
+  suggestedContainer: {
     display: 'flex',
     flexDirection: 'column',
-    minWidth: 105,
-    boxShadow: 'var(--shadow-sm)',
+    gap: '0.5rem',
+    alignItems: 'flex-start',
   },
-  statLabel: {
-    fontSize: '0.7rem',
+  suggestedLabel: {
+    fontSize: '0.75rem',
     fontWeight: 700,
     textTransform: 'uppercase',
+    letterSpacing: '0.5px',
     color: 'var(--slate-500)',
-    letterSpacing: '0.4px',
   },
-  statVal: {
-    fontSize: '1.25rem',
-    fontWeight: 800,
-    fontFamily: 'var(--font-mono)',
+  suggestedPills: {
+    display: 'flex',
+    gap: '0.5rem',
+    flexWrap: 'wrap',
+  },
+  suggestedPill: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '0.5rem',
+    background: '#ffffff',
+    border: '1.5px solid var(--primary-border)',
+    borderRadius: 'var(--radius-full)',
+    padding: '0.4rem 0.85rem',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+    boxShadow: 'var(--shadow-sm)',
+  },
+  suggestedDot: {
+    width: 8,
+    height: 8,
+    borderRadius: '50%',
+    background: 'var(--success)',
+  },
+  suggestedName: {
+    fontSize: '0.85rem',
     color: 'var(--slate-900)',
+  },
+  suggestedBadge: {
+    fontSize: '0.75rem',
+    fontWeight: 700,
+    fontFamily: 'var(--font-mono)',
+    background: 'var(--primary-light)',
+    color: 'var(--primary-dark)',
+    padding: '0.15rem 0.5rem',
+    borderRadius: 'var(--radius-full)',
+  },
+  filterGroup: {
+    display: 'flex',
+    gap: '0.5rem',
+  },
+  filterBtn: {
+    padding: '0.65rem 1rem',
+    borderRadius: 'var(--radius-md)',
+    border: '1px solid',
+    fontSize: '0.85rem',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+    whiteSpace: 'nowrap',
   },
   controlsBar: {
     display: 'flex',
