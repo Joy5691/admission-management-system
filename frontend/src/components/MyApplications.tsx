@@ -96,7 +96,7 @@ export function MyApplications({ studentId, lang = 'en', onViewHold, onGoToClass
               className="btn btn-primary"
               style={{ padding: '0.75rem 1.25rem' }}
             >
-              ${t.searchApplicationsBtn || 'Search Applications →'}
+              {t.searchApplicationsBtn || 'Search Applications →'}
             </button>
           </form>
           <span style={{ fontSize: '0.75rem', color: 'var(--slate-400)', marginTop: '0.5rem', display: 'block', fontFamily: 'var(--font-mono)' }}>

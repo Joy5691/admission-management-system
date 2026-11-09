@@ -93,29 +93,30 @@ function App() {
     <div style={styles.appShell}>
       {/* Top Header */}
       <header style={styles.header}>
-        <div style={styles.headerInner}>
+        <div className="top-header-inner">
           {/* Brand with Onnorokom Logo */}
-          <div style={styles.brand} onClick={handleBackToDashboard}>
-            <div style={styles.logoBadge}>
+          <div className="brand-wrapper" onClick={handleBackToDashboard}>
+            <div style={styles.logoBadge} className="brand-logo-badge">
               <img
                 src="/logo.jpg"
                 alt="Onnorokom Academy Logo"
                 style={styles.logoImg}
               />
             </div>
-            <div>
-              <div style={styles.brandName}>{t.brandName}</div>
-              <div style={styles.brandTag}>{t.brandTag}</div>
+            <div className="brand-text-col">
+              <span className="brand-heading">{t.brandName}</span>
+              <span className="brand-subheading">{t.brandTag}</span>
             </div>
           </div>
 
           {/* Right Header Controls: Language Toggle & Admin Login */}
-          <div style={styles.rightSection}>
+          <div className="header-right-actions">
             {/* Language Switcher */}
             <div style={styles.langToggle}>
               <button
                 type="button"
                 onClick={() => setLang('en')}
+                className="lang-toggle-btn"
                 style={{
                   ...styles.langBtn,
                   background: lang === 'en' ? 'var(--primary)' : 'transparent',
@@ -128,6 +129,7 @@ function App() {
               <button
                 type="button"
                 onClick={() => setLang('bn')}
+                className="lang-toggle-btn"
                 style={{
                   ...styles.langBtn,
                   background: lang === 'bn' ? 'var(--primary)' : 'transparent',
@@ -149,16 +151,19 @@ function App() {
                     setSelectedClassId(null);
                     setActiveTab('admin');
                   }}
+                  className="btn-admin-header"
                   style={{
                     ...styles.adminBtn,
                     background: activeTab === 'admin' ? 'var(--primary-dark)' : 'var(--primary)',
                   }}
                 >
-                  {t.adminPortal}
+                  <span className="btn-text-full">{t.adminPortal}</span>
+                  <span className="btn-text-short">{lang === 'bn' ? 'পোর্টাল' : 'Portal'}</span>
                 </button>
                 <button
                   type="button"
                   onClick={handleLogout}
+                  className="btn-admin-header"
                   style={styles.logoutBtn}
                   title={t.logout}
                 >
@@ -169,10 +174,11 @@ function App() {
               <button
                 type="button"
                 onClick={() => setIsLoginModalOpen(true)}
-                className="btn btn-outline"
+                className="btn btn-outline btn-admin-header"
                 style={styles.adminLoginBtn}
               >
-                {t.adminLogin}
+                <span className="btn-text-full">{t.adminLogin}</span>
+                <span className="btn-text-short">{lang === 'bn' ? 'অ্যাডমিন' : 'Admin'}</span>
               </button>
             )}
           </div>
@@ -182,7 +188,7 @@ function App() {
       {/* Main Navigation Tabs */}
       {!viewingHoldId && (
         <nav style={styles.navBar}>
-          <div style={styles.navInner}>
+          <div style={styles.navInner} className="nav-inner-responsive">
             <TabButton
               label={t.classesTab}
               active={activeTab === 'classes'}
@@ -290,6 +296,7 @@ function TabButton({
   return (
     <button
       onClick={onClick}
+      className="tab-btn-responsive"
       style={{
         ...styles.tabBtn,
         color: active ? 'var(--primary)' : 'var(--slate-600)',

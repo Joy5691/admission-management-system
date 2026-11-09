@@ -90,38 +90,14 @@ export function ClassList({
   }
 
   return (
-    <div style={styles.container} className="animate-fade-in">
-      {/* Top Banner & Suggested Classes */}
+    <div style={styles.container} className="animate-fade-in class-list-container">
+      {/* Top Banner */}
       <div style={styles.headerBanner}>
-        <div>
-          <h1 style={styles.title}>{t.studentAdmissionTitle}</h1>
-        </div>
-
-        {/* Suggested Classes with Available Seats */}
-        {openClasses.length > 0 && (
-          <div style={styles.suggestedContainer}>
-            <span style={styles.suggestedLabel}>{t.suggestedLabel}</span>
-            <div style={styles.suggestedPills}>
-              {openClasses.map(cls => (
-                <button
-                  key={cls.id}
-                  type="button"
-                  onClick={() => setSelectedClassId(cls.id)}
-                  style={styles.suggestedPill}
-                  title={`${cls.name} (${cls.availableSeats} ${t.seatsOpen})`}
-                >
-                  <span style={styles.suggestedDot} />
-                  <strong style={styles.suggestedName}>{cls.name}</strong>
-                  <span style={styles.suggestedBadge}>{cls.availableSeats} {t.seatsLeft}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
+        <h1 style={styles.title}>{t.studentAdmissionTitle}</h1>
       </div>
 
       {/* Search & Filter Bar */}
-      <div style={styles.controlsBar}>
+      <div style={styles.controlsBar} className="controls-bar-responsive">
         <div style={styles.searchWrapper}>
           <svg style={styles.searchSvg} viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" strokeWidth="2" fill="none">
             <circle cx="11" cy="11" r="8"></circle>
@@ -200,8 +176,7 @@ export function ClassList({
         /* Academic Class Modules Grid */
         <div style={styles.modulesGrid}>
           {filtered.map(c => {
-            const isFull = c.availableSeats === 0;
-            const occupancyPct = c.totalSeats > 0 ? Math.round(((c.confirmedSeats + c.heldSeats) / c.totalSeats) * 100) : 0;
+                        const occupancyPct = c.totalSeats > 0 ? Math.round(((c.confirmedSeats + c.heldSeats) / c.totalSeats) * 100) : 0;
             const isMorning = c.name.toLowerCase().includes('morning');
             const isEvening = c.name.toLowerCase().includes('evening');
             const shiftName = isMorning
@@ -223,23 +198,6 @@ export function ClassList({
                     <h3 style={styles.moduleClassName}>{c.name}</h3>
                     <span style={styles.moduleShiftTag}>{shiftName}</span>
                   </div>
-
-                  <span
-                    style={{
-                      ...styles.statusBadge,
-                      background: isFull ? 'var(--danger-light)' : 'var(--success-light)',
-                      color: isFull ? 'var(--danger-dark)' : 'var(--success-dark)',
-                      borderColor: isFull ? 'var(--danger-border)' : 'var(--success-border)',
-                    }}
-                  >
-                    <span
-                      style={{
-                        ...styles.statusDot,
-                        background: isFull ? 'var(--danger)' : 'var(--success)',
-                      }}
-                    />
-                    {isFull ? t.capacityFull : t.openForAdmission}
-                  </span>
                 </div>
 
                 {/* Seat Metrics Row */}
@@ -333,98 +291,6 @@ const styles: Record<string, React.CSSProperties> = {
     color: 'var(--slate-900)',
     letterSpacing: '-0.025em',
     margin: 0,
-  },
-  suggestedContainer: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '0.4rem',
-    alignItems: 'flex-start',
-  },
-  suggestedLabel: {
-    fontSize: '0.725rem',
-    fontWeight: 700,
-    textTransform: 'uppercase',
-    letterSpacing: '0.4px',
-    color: 'var(--slate-500)',
-  },
-  suggestedPills: {
-    display: 'flex',
-    gap: '0.5rem',
-    flexWrap: 'wrap',
-  },
-  suggestedPill: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: '0.45rem',
-    background: '#ffffff',
-    border: '1px solid var(--primary-border)',
-    borderRadius: 'var(--radius-full)',
-    padding: '0.35rem 0.8rem',
-    cursor: 'pointer',
-    transition: 'all 0.15s ease',
-    boxShadow: 'var(--shadow-sm)',
-  },
-  suggestedDot: {
-    width: 7,
-    height: 7,
-    borderRadius: '50%',
-    background: 'var(--success)',
-    display: 'inline-block',
-  },
-  suggestedName: {
-    fontSize: '0.825rem',
-    color: 'var(--slate-900)',
-    fontWeight: 600,
-  },
-  suggestedBadge: {
-    fontSize: '0.725rem',
-    fontWeight: 700,
-    fontFamily: 'var(--font-mono)',
-    background: 'var(--primary-light)',
-    color: 'var(--primary-dark)',
-    padding: '0.1rem 0.45rem',
-    borderRadius: 'var(--radius-full)',
-  },
-  controlsBar: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: '1rem',
-    marginBottom: '1.5rem',
-    flexWrap: 'wrap',
-  },
-  searchWrapper: {
-    position: 'relative',
-    flex: '1 1 320px',
-    maxWidth: 500,
-    display: 'flex',
-    alignItems: 'center',
-  },
-  searchSvg: {
-    position: 'absolute',
-    left: '0.85rem',
-    color: 'var(--slate-400)',
-    pointerEvents: 'none',
-  },
-  searchInput: {
-    width: '100%',
-    padding: '0.65rem 2rem 0.65rem 2.4rem',
-    borderRadius: 'var(--radius-md)',
-    border: '1px solid var(--slate-300)',
-    background: '#ffffff',
-    fontSize: '0.9rem',
-    fontFamily: 'inherit',
-    outline: 'none',
-    boxShadow: 'var(--shadow-sm)',
-  },
-  clearSearchBtn: {
-    position: 'absolute',
-    right: '0.75rem',
-    background: 'none',
-    border: 'none',
-    color: 'var(--slate-400)',
-    cursor: 'pointer',
-    fontSize: '0.8rem',
   },
   filterGroup: {
     display: 'flex',

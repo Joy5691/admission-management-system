@@ -185,7 +185,7 @@ export function AdminPortal({ onViewClassSeatMap, onLogout }: AdminPortalProps) 
                 color: feedback.type === 'success' ? 'var(--success-dark)' : 'var(--danger-dark)',
               }}
             >
-              {feedback.type === 'success' ? '✓ ' : '⚠️ '}
+              <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: feedback.type === 'success' ? 'var(--success-dark)' : 'var(--danger-dark)', marginRight: 8 }} />
               {feedback.message}
             </div>
           )}

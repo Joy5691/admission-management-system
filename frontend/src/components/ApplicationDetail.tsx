@@ -178,14 +178,14 @@ export function ApplicationDetail({ holdId, studentId, lang = 'en', onBack }: Pr
         {/* Feedback Alerts */}
         {error && (
           <div style={styles.errorAlert}>
-            <span>⚠️</span>
+            <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: 'var(--danger-dark)', marginRight: 8, flexShrink: 0 }} />
             <span>{error}</span>
           </div>
         )}
 
         {successMsg && (
           <div style={styles.successAlert}>
-            <span>✅</span>
+            <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: 'var(--success-dark)', marginRight: 8, flexShrink: 0 }} />
             <span>{successMsg}</span>
           </div>
         )}
