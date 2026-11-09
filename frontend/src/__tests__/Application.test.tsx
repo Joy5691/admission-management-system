@@ -59,7 +59,8 @@ describe('Frontend Application Flow & Timer Tests', () => {
     );
 
     // Wait for the hold details to load
-    expect(await screen.findByText('Hold Expired')).toBeDefined();
+    const matches = await screen.findAllByText('Hold Expired');
+    expect(matches.length).toBeGreaterThan(0);
 
     // Pay button must be disabled
     const payBtn = screen.getByRole('button', { name: /Pay Admission Fee/i }) as HTMLButtonElement;

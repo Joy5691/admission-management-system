@@ -1,23 +1,20 @@
-import { useEffect, useState, useCallback } from 'react';
+﻿import { useEffect, useState, useCallback, useMemo } from 'react';
 import { apiFetch, friendlyError } from '../api/client';
 import { MyHold } from '../types';
 
 interface Props {
   studentId: string;
   onViewHold: (holdId: string) => void;
+  onGoToClasses?: () => void;
 }
 
-const STATUS_COLORS: Record<string, string> = {
-  HELD: '#f39c12',
-  CONFIRMED: '#27ae60',
-  EXPIRED: '#e74c3c',
-  CANCELLED: '#95a5a6',
-};
+type Filter = 'ALL' | 'HELD' | 'CONFIRMED' | 'TERMINAL';
 
-export function MyApplications({ studentId, onViewHold }: Props) {
+export function MyApplications({ studentId, onViewHold, onGoToClasses }: Props) {
   const [holds, setHolds] = useState<MyHold[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [filter, setFilter] = useState<Filter>('ALL');
 
   const fetchHolds = useCallback(async () => {
     if (!studentId) {
@@ -44,74 +41,375 @@ export function MyApplications({ studentId, onViewHold }: Props) {
     return () => clearInterval(id);
   }, [fetchHolds]);
 
+  const filtered = useMemo(() => {
+    if (filter === 'ALL') return holds;
+    if (filter === 'HELD') return holds.filter(h => h.status === 'HELD');
+    if (filter === 'CONFIRMED') return holds.filter(h => h.status === 'CONFIRMED');
+    return holds.filter(h => h.status === 'EXPIRED' || h.status === 'CANCELLED');
+  }, [holds, filter]);
+
   if (!studentId) {
     return (
       <div style={styles.container}>
-        <div style={styles.warn}>Please enter your Student ID to view your applications.</div>
+        <div style={styles.warnCard} className="card">
+          <span style={styles.warnIcon}>🪪</span>
+          <h3 style={styles.warnTitle}>Student Identification Required</h3>
+          <p style={styles.warnText}>
+            Please enter your 17-digit birth registration number in the top bar to view your submitted applications and confirmed admissions.
+          </p>
+        </div>
       </div>
     );
   }
 
-  if (loading) return <div style={styles.loading}>Loading applications…</div>;
+  if (loading) {
+    return (
+      <div style={styles.container}>
+        <div style={{ textAlign: 'center', padding: '4rem 1rem' }}>
+          <div className="skeleton" style={{ height: 32, width: 220, marginBottom: 20 }} />
+          <div className="skeleton" style={{ height: 180, width: '100%', borderRadius: 12 }} />
+        </div>
+      </div>
+    );
+  }
+
+  const heldCount = holds.filter(h => h.status === 'HELD').length;
+  const confirmedCount = holds.filter(h => h.status === 'CONFIRMED').length;
 
   return (
-    <div style={styles.container}>
-      <h2 style={styles.heading}>My Applications</h2>
-      {error && <div style={styles.errorBox}>{error}</div>}
-      {!error && holds.length === 0 && (
-        <div style={styles.empty}>No applications yet. Apply for a class to get started!</div>
+    <div style={styles.container} className="animate-fade-in">
+      {/* Top Banner */}
+      <div style={styles.header}>
+        <div>
+          <h1 style={styles.title}>My Applications</h1>
+          <p style={styles.subtitle}>
+            Student ID: <code style={styles.idCode}>{studentId}</code>
+          </p>
+        </div>
+
+        {/* Quick Stat Chips */}
+        <div style={styles.chipsRow}>
+          <div style={styles.chip}>
+            <span style={styles.chipNum}>{holds.length}</span>
+            <span style={styles.chipText}>Total</span>
+          </div>
+          <div style={styles.chip}>
+            <span style={{ ...styles.chipNum, color: 'var(--warning-dark)' }}>{heldCount}</span>
+            <span style={styles.chipText}>Active Holds</span>
+          </div>
+          <div style={styles.chip}>
+            <span style={{ ...styles.chipNum, color: 'var(--success-dark)' }}>{confirmedCount}</span>
+            <span style={styles.chipText}>Confirmed</span>
+          </div>
+        </div>
+      </div>
+
+      {error && (
+        <div style={styles.errorBox}>
+          <span>⚠️</span>
+          <span>{error}</span>
+        </div>
       )}
+
+      {/* Filter Tabs */}
       {holds.length > 0 && (
-        <table style={styles.table}>
-          <thead>
-            <tr style={styles.thead}>
-              <th style={styles.th}>Class</th>
-              <th style={styles.th}>Status</th>
-              <th style={styles.th}>Expires At</th>
-              <th style={styles.th}>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {holds.map(h => (
-              <tr
-                key={h.holdId}
-                style={styles.tr}
-                onMouseEnter={e => (e.currentTarget.style.background = '#f5f5f5')}
-                onMouseLeave={e => (e.currentTarget.style.background = '#fff')}
-              >
-                <td style={styles.td}>{h.className}</td>
-                <td style={styles.td}>
-                  <span style={{ ...styles.badge, background: STATUS_COLORS[h.status] || '#888', color: '#fff' }}>
-                    {h.status}
-                  </span>
-                </td>
-                <td style={styles.td}>{h.expiresAt ? new Date(h.expiresAt).toLocaleString() : '—'}</td>
-                <td style={styles.td}>
-                  <button style={styles.viewBtn} onClick={() => onViewHold(h.holdId)}>
-                    View
+        <div style={styles.filterBar}>
+          {(['ALL', 'HELD', 'CONFIRMED', 'TERMINAL'] as Filter[]).map(f => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              style={{
+                ...styles.filterBtn,
+                background: filter === f ? 'var(--primary-gradient)' : '#fff',
+                color: filter === f ? '#fff' : 'var(--slate-600)',
+                borderColor: filter === f ? 'transparent' : 'var(--slate-200)',
+              }}
+              type="button"
+            >
+              {f === 'ALL'
+                ? `All (${holds.length})`
+                : f === 'HELD'
+                ? `Active Holds (${heldCount})`
+                : f === 'CONFIRMED'
+                ? `Confirmed (${confirmedCount})`
+                : 'Expired / Cancelled'}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Empty State */}
+      {holds.length === 0 && (
+        <div style={styles.emptyState} className="card">
+          <div style={styles.emptyIcon}>📝</div>
+          <h3 style={styles.emptyTitle}>No Applications on Record</h3>
+          <p style={styles.emptyText}>
+            You have not applied for any class seats yet. Explore available shifts and apply online.
+          </p>
+          {onGoToClasses && (
+            <button onClick={onGoToClasses} className="btn btn-primary" style={{ marginTop: '1rem' }}>
+              Browse Available Classes →
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Filtered Empty State */}
+      {holds.length > 0 && filtered.length === 0 && (
+        <div style={styles.emptyState} className="card">
+          <h3 style={styles.emptyTitle}>No Applications Match This Filter</h3>
+          <button onClick={() => setFilter('ALL')} className="btn btn-outline" style={{ marginTop: '0.75rem' }}>
+            Show All Applications
+          </button>
+        </div>
+      )}
+
+      {/* Cards Table List */}
+      {filtered.length > 0 && (
+        <div style={styles.list}>
+          {filtered.map(h => {
+            const isHeld = h.status === 'HELD';
+            const isConfirmed = h.status === 'CONFIRMED';
+            const isExpired = h.status === 'EXPIRED';
+
+            const badgeClass = isHeld
+              ? 'badge-held'
+              : isConfirmed
+              ? 'badge-confirmed'
+              : isExpired
+              ? 'badge-expired'
+              : 'badge-cancelled';
+
+            const statusText = isHeld
+              ? 'HELD — Awaiting Payment'
+              : isConfirmed
+              ? 'Confirmed Admission'
+              : isExpired
+              ? 'Expired'
+              : 'Cancelled';
+
+            return (
+              <div key={h.holdId} className="card" style={styles.appCard}>
+                <div style={styles.cardMain}>
+                  <div style={styles.cardHeader}>
+                    <span className={`badge ${badgeClass}`}>{statusText}</span>
+                    <span style={styles.holdRef}>Ref: {h.holdId.slice(0, 8)}…</span>
+                  </div>
+
+                  <h3 style={styles.className}>{h.className}</h3>
+
+                  <div style={styles.dateRow}>
+                    <span style={styles.dateLabel}>Expiry / Expiration:</span>
+                    <span style={styles.dateVal}>
+                      {h.expiresAt ? new Date(h.expiresAt).toLocaleString() : '—'}
+                    </span>
+                  </div>
+                </div>
+
+                <div style={styles.cardActions}>
+                  <button
+                    onClick={() => onViewHold(h.holdId)}
+                    className={`btn ${isHeld ? 'btn-primary' : 'btn-outline'}`}
+                    style={styles.actionBtn}
+                  >
+                    {isHeld ? '💳 Pay Admission Fee →' : 'View Details →'}
                   </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       )}
     </div>
   );
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  container: { padding: '1.5rem' },
-  heading: { color: '#2c3e50', marginBottom: '1rem' },
-  loading: { padding: '2rem', textAlign: 'center', color: '#888' },
-  empty: { padding: '2rem', textAlign: 'center', color: '#888', background: '#f9f9f9', borderRadius: 8 },
-  errorBox: { padding: '1rem', background: '#fdecea', color: '#c0392b', borderRadius: 6, marginBottom: '1rem' },
-  warn: { padding: '1rem', background: '#fff9e6', color: '#856404', borderRadius: 6 },
-  table: { width: '100%', borderCollapse: 'collapse', background: '#fff', border: '1px solid #e0e0e0', borderRadius: 8, overflow: 'hidden' },
-  thead: { background: '#2c3e50', color: '#fff' },
-  th: { padding: '0.75rem 1rem', textAlign: 'left', color: '#ecf0f1', fontWeight: 600 },
-  tr: { borderBottom: '1px solid #f0f0f0', background: '#fff', transition: 'background 0.15s', cursor: 'default' },
-  td: { padding: '0.75rem 1rem' },
-  badge: { padding: '0.25rem 0.65rem', borderRadius: 20, fontSize: '0.8rem', fontWeight: 700 },
-  viewBtn: { padding: '0.3rem 0.9rem', background: '#2980b9', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer', fontWeight: 600 },
+  container: {
+    padding: '2rem 1.5rem',
+    maxWidth: 960,
+    margin: '0 auto',
+  },
+  header: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: '1.5rem',
+    marginBottom: '2rem',
+    flexWrap: 'wrap',
+  },
+  title: {
+    fontSize: '1.85rem',
+    fontWeight: 800,
+    color: 'var(--slate-900)',
+    letterSpacing: '-0.025em',
+    marginBottom: '0.35rem',
+  },
+  subtitle: {
+    fontSize: '0.95rem',
+    color: 'var(--slate-500)',
+  },
+  idCode: {
+    fontFamily: 'var(--font-mono)',
+    fontWeight: 700,
+    color: 'var(--primary)',
+    background: 'var(--primary-light)',
+    padding: '0.2rem 0.5rem',
+    borderRadius: 'var(--radius-sm)',
+  },
+  chipsRow: {
+    display: 'flex',
+    gap: '0.75rem',
+  },
+  chip: {
+    background: '#fff',
+    border: '1px solid var(--slate-200)',
+    borderRadius: 'var(--radius-md)',
+    padding: '0.5rem 1rem',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    boxShadow: 'var(--shadow-sm)',
+    minWidth: 85,
+  },
+  chipNum: {
+    fontSize: '1.3rem',
+    fontWeight: 800,
+    fontFamily: 'var(--font-mono)',
+    color: 'var(--slate-900)',
+  },
+  chipText: {
+    fontSize: '0.675rem',
+    fontWeight: 700,
+    textTransform: 'uppercase',
+    color: 'var(--slate-500)',
+    letterSpacing: '0.3px',
+  },
+  filterBar: {
+    display: 'flex',
+    gap: '0.5rem',
+    marginBottom: '1.5rem',
+    flexWrap: 'wrap',
+  },
+  filterBtn: {
+    padding: '0.5rem 1rem',
+    borderRadius: 'var(--radius-full)',
+    border: '1px solid',
+    fontSize: '0.85rem',
+    fontWeight: 600,
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+  },
+  warnCard: {
+    padding: '3rem 2rem',
+    textAlign: 'center',
+    maxWidth: 520,
+    margin: '3rem auto',
+    background: '#fff',
+  },
+  warnIcon: {
+    fontSize: '2.5rem',
+    display: 'block',
+    marginBottom: '1rem',
+  },
+  warnTitle: {
+    fontSize: '1.25rem',
+    fontWeight: 800,
+    color: 'var(--slate-900)',
+    marginBottom: '0.5rem',
+  },
+  warnText: {
+    fontSize: '0.925rem',
+    color: 'var(--slate-600)',
+    lineHeight: 1.5,
+  },
+  errorBox: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.5rem',
+    padding: '0.85rem 1.25rem',
+    background: 'var(--danger-light)',
+    border: '1px solid var(--danger-border)',
+    color: 'var(--danger-dark)',
+    borderRadius: 'var(--radius-md)',
+    marginBottom: '1.5rem',
+    fontWeight: 600,
+  },
+  emptyState: {
+    padding: '3.5rem 2rem',
+    textAlign: 'center',
+    background: '#fff',
+    border: '1px dashed var(--slate-300)',
+    maxWidth: 500,
+    margin: '2rem auto',
+  },
+  emptyIcon: {
+    fontSize: '2.5rem',
+    marginBottom: '0.75rem',
+  },
+  emptyTitle: {
+    fontSize: '1.2rem',
+    fontWeight: 700,
+    color: 'var(--slate-800)',
+    marginBottom: '0.4rem',
+  },
+  emptyText: {
+    fontSize: '0.9rem',
+    color: 'var(--slate-500)',
+    lineHeight: 1.5,
+  },
+  list: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '1rem',
+  },
+  appCard: {
+    padding: '1.25rem 1.5rem',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: '1.5rem',
+    flexWrap: 'wrap',
+  },
+  cardMain: {
+    flex: 1,
+    minWidth: 260,
+  },
+  cardHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.75rem',
+    marginBottom: '0.5rem',
+  },
+  holdRef: {
+    fontFamily: 'var(--font-mono)',
+    fontSize: '0.75rem',
+    color: 'var(--slate-400)',
+  },
+  className: {
+    fontSize: '1.25rem',
+    fontWeight: 700,
+    color: 'var(--slate-900)',
+    marginBottom: '0.5rem',
+  },
+  dateRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.5rem',
+    fontSize: '0.85rem',
+  },
+  dateLabel: {
+    color: 'var(--slate-500)',
+  },
+  dateVal: {
+    fontWeight: 600,
+    color: 'var(--slate-700)',
+  },
+  cardActions: {
+    display: 'flex',
+    alignItems: 'center',
+  },
+  actionBtn: {
+    padding: '0.65rem 1.25rem',
+  },
 };

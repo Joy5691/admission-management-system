@@ -51,3 +51,15 @@ This document records which AI tools were used during the development of the Sch
 - **Why it was wrong:** The assignment specification explicitly states: *"Do not copy the original assignment PDF into the repository"* and *"Do not make this assignment PDF public"*.
 - **How it was caught:** Caught during pre-submission audit when inspecting `git ls-files`.
 - **Fix:** Added `files/` and `*.pdf` to `.gitignore` and removed the directory from Git's index using `git rm -r --cached files/` while keeping the local files intact.
+
+### Mistake 7: Unquoted CSS Variable in TypeScript Stylesheet Object
+- **What happened:** In `ClassList.tsx`, a CSS custom property `borderRadius: var(--radius-full)` was written without quotation marks.
+- **Why it was wrong:** In TypeScript/JavaScript object literals, CSS variable references must be quoted strings (`'var(--radius-full)'`). Without quotes, TypeScript parser threw `TS1109: Expression expected`.
+- **How it was caught:** Caught during `npx tsc` compilation check.
+- **Fix:** Enclosed `'var(--radius-full)'` in quotes.
+
+### Mistake 8: Test Query Discrepancy After UI Redesign
+- **What happened:** In `Application.test.tsx`, `screen.findByText('Hold Expired')` was used to verify that an expired hold loaded in `ApplicationDetail`.
+- **Why it was wrong:** The enhanced UI rendered both a hero banner title (`Hold Expired`) and an application status chip (`Hold Expired`). `findByText` throws if more than one matching element is found.
+- **How it was caught:** Caught during `vitest run`.
+- **Fix:** Updated the test assertion to `screen.findAllByText('Hold Expired')` to properly match multiple badge and banner instances.
