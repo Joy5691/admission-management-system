@@ -45,3 +45,9 @@ This document records which AI tools were used during the development of the Sch
 - **Why it was wrong:** When queried via EF Core or compared with 17-character input strings, string equality checks could fail if trailing spaces were not stripped.
 - **How it was caught:** Identified during schema definition review.
 - **Fix:** Used `varchar(17)` in the schema while enforcing the exact 17-digit validation in middleware/endpoints and table check constraints.
+
+### Mistake 6: Inclusion of Confidential Assignment PDF in Initial Git Tracking
+- **What happened:** An initial recursive `git add` in the scaffold phase staged the `files/` directory containing the confidential assignment PDF.
+- **Why it was wrong:** The assignment specification explicitly states: *"Do not copy the original assignment PDF into the repository"* and *"Do not make this assignment PDF public"*.
+- **How it was caught:** Caught during pre-submission audit when inspecting `git ls-files`.
+- **Fix:** Added `files/` and `*.pdf` to `.gitignore` and removed the directory from Git's index using `git rm -r --cached files/` while keeping the local files intact.
