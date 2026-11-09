@@ -68,3 +68,6 @@ app.MapClassesEndpoints();
 app.MapHoldsEndpoints();
 
 app.Run();
+
+// Allow WebApplicationFactory<Program> to reference this type from test projects
+public partial class Program { }
