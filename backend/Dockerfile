@@ -1,15 +1,16 @@
 # ---- Build stage ----
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+# Using .NET 10 SDK (matches local development environment)
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
-COPY src/SchoolAdmission.csproj ./src/
-RUN dotnet restore ./src/SchoolAdmission.csproj
+COPY src/SchoolAdmission/SchoolAdmission.csproj ./src/SchoolAdmission/
+RUN dotnet restore ./src/SchoolAdmission/SchoolAdmission.csproj
 
-COPY src/ ./src/
-RUN dotnet publish ./src/SchoolAdmission.csproj -c Release -o /app/publish --no-restore
+COPY src/SchoolAdmission/ ./src/SchoolAdmission/
+RUN dotnet publish ./src/SchoolAdmission/SchoolAdmission.csproj -c Release -o /app/publish --no-restore
 
 # ---- Runtime stage ----
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
 COPY --from=build /app/publish .
 ENV ASPNETCORE_URLS=http://+:8080
