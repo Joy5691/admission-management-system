@@ -129,23 +129,39 @@ public static class HoldsEndpoints
     }
 
     // GET /holds/{holdId} → 200 { holdId, classId, status, expiresAt }
+    // Uses DB clock (now()) for lazy expiry status reporting.
     private static async Task<IResult> GetHold(Guid holdId, AppDbContext db)
     {
-        var hold = await db.Holds.FindAsync(holdId);
-        if (hold is null)
-            return ErrorResult(404, "HOLD_NOT_FOUND", "Hold not found.");
-
-        // Apply lazy expiry reporting
-        var now = DateTime.UtcNow;
-        var reportedStatus = hold.Status == "HELD" && hold.ExpiresAt <= now ? "EXPIRED" : hold.Status;
-
-        return Results.Ok(new
+        var conn = (NpgsqlConnection)db.Database.GetDbConnection();
+        await conn.OpenAsync();
+        try
         {
-            holdId = hold.Id,
-            classId = hold.ClassId,
-            status = reportedStatus,
-            expiresAt = hold.ExpiresAt.ToString("o")
-        });
+            await using var cmd = new NpgsqlCommand(@"
+                SELECT id, class_id, status,
+                       CASE WHEN status='HELD' AND expires_at <= now() THEN 'EXPIRED' ELSE status END AS reported_status,
+                       expires_at
+                FROM holds WHERE id = @id", conn);
+            cmd.Parameters.AddWithValue("id", holdId);
+            await using var reader = await cmd.ExecuteReaderAsync();
+            if (!await reader.ReadAsync())
+                return ErrorResult(404, "HOLD_NOT_FOUND", "Hold not found.");
+
+            var classId = reader.GetGuid(1);
+            var reportedStatus = reader.GetString(3);
+            var expiresAt = reader.GetDateTime(4);
+
+            return Results.Ok(new
+            {
+                holdId,
+                classId,
+                status = reportedStatus,
+                expiresAt = expiresAt.ToString("o")
+            });
+        }
+        finally
+        {
+            await conn.CloseAsync();
+        }
     }
 
     // POST /holds/{holdId}/confirm → 200 { holdId, status: "CONFIRMED" } (idempotent)
@@ -273,33 +289,47 @@ public static class HoldsEndpoints
     }
 
     // GET /me/holds → 200 [{ holdId, classId, className, status, expiresAt }]
+    // Uses DB clock (now()) for lazy expiry status reporting.
     private static async Task<IResult> GetMyHolds(HttpContext ctx, AppDbContext db)
     {
         var studentId = ctx.Request.Headers["X-Student-Id"].FirstOrDefault();
         if (!IsValidStudentId(studentId))
             return ErrorResult(400, "INVALID_STUDENT_ID", "X-Student-Id must be exactly 17 digits.");
 
-        var now = DateTime.UtcNow;
-        var holds = await db.Holds
-            .Include(h => h.Class)
-            .Where(h => h.StudentId == studentId)
-            .OrderByDescending(h => h.CreatedAt)
-            .ToListAsync();
-
-        var result = holds.Select(h =>
+        var conn = (NpgsqlConnection)db.Database.GetDbConnection();
+        await conn.OpenAsync();
+        try
         {
-            var reportedStatus = h.Status == "HELD" && h.ExpiresAt <= now ? "EXPIRED" : h.Status;
-            return new
-            {
-                holdId = h.Id,
-                classId = h.ClassId,
-                className = h.Class.Name,
-                status = reportedStatus,
-                expiresAt = h.ExpiresAt.ToString("o")
-            };
-        });
+            await using var cmd = new NpgsqlCommand(@"
+                SELECT h.id, h.class_id, c.name,
+                       CASE WHEN h.status='HELD' AND h.expires_at <= now() THEN 'EXPIRED' ELSE h.status END AS reported_status,
+                       h.expires_at
+                FROM holds h
+                JOIN classes c ON c.id = h.class_id
+                WHERE h.student_id = @studentId
+                ORDER BY h.created_at DESC", conn);
+            cmd.Parameters.AddWithValue("studentId", studentId!);
+            await using var reader = await cmd.ExecuteReaderAsync();
 
-        return Results.Ok(result);
+            var result = new List<object>();
+            while (await reader.ReadAsync())
+            {
+                result.Add(new
+                {
+                    holdId = reader.GetGuid(0),
+                    classId = reader.GetGuid(1),
+                    className = reader.GetString(2),
+                    status = reader.GetString(3),
+                    expiresAt = reader.GetDateTime(4).ToString("o")
+                });
+            }
+
+            return Results.Ok(result);
+        }
+        finally
+        {
+            await conn.CloseAsync();
+        }
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────

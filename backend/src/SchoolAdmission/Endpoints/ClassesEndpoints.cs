@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using SchoolAdmission.Data;
 using SchoolAdmission.Models;
 
@@ -45,48 +46,63 @@ public static class ClassesEndpoints
     }
 
     // GET /classes → 200 [{ id, name, totalSeats, heldSeats, confirmedSeats, availableSeats }]
+    // Uses DB clock (now()) for expiry — never the application clock.
     private static async Task<IResult> GetAllClasses(AppDbContext db)
     {
-        var now = DateTime.UtcNow;
-        var classes = await db.Classes.ToListAsync();
-
-        var classIds = classes.Select(c => c.Id).ToList();
-
-        // Get held counts (not expired)
-        var heldCounts = await db.Holds
-            .Where(h => classIds.Contains(h.ClassId) && h.Status == "HELD" && h.ExpiresAt > now)
-            .GroupBy(h => h.ClassId)
-            .Select(g => new { ClassId = g.Key, Count = g.Count() })
-            .ToListAsync();
-
-        var confirmedCounts = await db.Holds
-            .Where(h => classIds.Contains(h.ClassId) && h.Status == "CONFIRMED")
-            .GroupBy(h => h.ClassId)
-            .Select(g => new { ClassId = g.Key, Count = g.Count() })
-            .ToListAsync();
-
-        var heldDict = heldCounts.ToDictionary(x => x.ClassId, x => x.Count);
-        var confirmedDict = confirmedCounts.ToDictionary(x => x.ClassId, x => x.Count);
-
-        var result = classes.Select(c =>
+        var conn = (NpgsqlConnection)db.Database.GetDbConnection();
+        await conn.OpenAsync();
+        try
         {
-            var held = heldDict.GetValueOrDefault(c.Id);
-            var confirmed = confirmedDict.GetValueOrDefault(c.Id);
-            return new
-            {
-                id = c.Id,
-                name = c.Name,
-                totalSeats = c.TotalSeats,
-                heldSeats = held,
-                confirmedSeats = confirmed,
-                availableSeats = c.TotalSeats - held - confirmed
-            };
-        });
+            var classes = await db.Classes.OrderBy(c => c.CreatedAt).ToListAsync();
+            var classIds = classes.Select(c => c.Id).ToArray();
 
-        return Results.Ok(result);
+            var heldDict = new Dictionary<Guid, int>();
+            var confirmedDict = new Dictionary<Guid, int>();
+
+            if (classIds.Length > 0)
+            {
+                await using var cmd = new NpgsqlCommand(@"
+                    SELECT class_id,
+                           COUNT(*) FILTER (WHERE status='HELD' AND expires_at > now())::int AS held,
+                           COUNT(*) FILTER (WHERE status='CONFIRMED')::int AS confirmed
+                    FROM holds
+                    WHERE class_id = ANY(@ids)
+                    GROUP BY class_id", conn);
+                cmd.Parameters.AddWithValue("ids", classIds);
+                await using var reader = await cmd.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                {
+                    var cid = reader.GetGuid(0);
+                    heldDict[cid] = reader.GetInt32(1);
+                    confirmedDict[cid] = reader.GetInt32(2);
+                }
+            }
+
+            var result = classes.Select(c =>
+            {
+                var held = heldDict.GetValueOrDefault(c.Id);
+                var confirmed = confirmedDict.GetValueOrDefault(c.Id);
+                return new
+                {
+                    id = c.Id,
+                    name = c.Name,
+                    totalSeats = c.TotalSeats,
+                    heldSeats = held,
+                    confirmedSeats = confirmed,
+                    availableSeats = c.TotalSeats - held - confirmed
+                };
+            });
+
+            return Results.Ok(result);
+        }
+        finally
+        {
+            await conn.CloseAsync();
+        }
     }
 
     // GET /classes/{classId} → 200 { id, name, totalSeats, heldSeats, confirmedSeats, availableSeats }
+    // Uses DB clock (now()) for expiry — never the application clock.
     private static async Task<IResult> GetClassById(Guid classId, AppDbContext db)
     {
         var cls = await db.Classes.FindAsync(classId);
@@ -95,19 +111,36 @@ public static class ClassesEndpoints
                 new { error = new { code = "CLASS_NOT_FOUND", message = "Class not found." } },
                 statusCode: 404);
 
-        var now = DateTime.UtcNow;
-        var held = await db.Holds.CountAsync(h => h.ClassId == classId && h.Status == "HELD" && h.ExpiresAt > now);
-        var confirmed = await db.Holds.CountAsync(h => h.ClassId == classId && h.Status == "CONFIRMED");
-
-        return Results.Ok(new
+        var conn = (NpgsqlConnection)db.Database.GetDbConnection();
+        await conn.OpenAsync();
+        try
         {
-            id = cls.Id,
-            name = cls.Name,
-            totalSeats = cls.TotalSeats,
-            heldSeats = held,
-            confirmedSeats = confirmed,
-            availableSeats = cls.TotalSeats - held - confirmed
-        });
+            await using var cmd = new NpgsqlCommand(@"
+                SELECT
+                    COUNT(*) FILTER (WHERE status='HELD' AND expires_at > now())::int AS held,
+                    COUNT(*) FILTER (WHERE status='CONFIRMED')::int AS confirmed
+                FROM holds
+                WHERE class_id = @classId", conn);
+            cmd.Parameters.AddWithValue("classId", classId);
+            await using var reader = await cmd.ExecuteReaderAsync();
+            await reader.ReadAsync();
+            var held = reader.GetInt32(0);
+            var confirmed = reader.GetInt32(1);
+
+            return Results.Ok(new
+            {
+                id = cls.Id,
+                name = cls.Name,
+                totalSeats = cls.TotalSeats,
+                heldSeats = held,
+                confirmedSeats = confirmed,
+                availableSeats = cls.TotalSeats - held - confirmed
+            });
+        }
+        finally
+        {
+            await conn.CloseAsync();
+        }
     }
 }
 
