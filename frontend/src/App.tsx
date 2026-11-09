@@ -5,17 +5,32 @@ import { MyApplications } from './components/MyApplications';
 import { AdminPortal } from './components/AdminPortal';
 import { AdminLoginModal } from './components/AdminLoginModal';
 import { ErrorBoundary } from './ErrorBoundary';
+import { Language, translations } from './i18n';
 
 type Tab = 'classes' | 'my-applications' | 'admin';
+type PreviousSource = 'seatmap' | 'my-applications' | 'classes';
 
 const STUDENT_ID_KEY = 'studentId';
 const IS_ADMIN_KEY = 'isAdmin';
+const LANG_KEY = 'portal_lang';
 
 function App() {
+  const [lang, setLangState] = useState<Language>(() => {
+    return (localStorage.getItem(LANG_KEY) as Language) || 'en';
+  });
+
+  const setLang = (newLang: Language) => {
+    localStorage.setItem(LANG_KEY, newLang);
+    setLangState(newLang);
+  };
+
+  const t = translations[lang] || translations.en;
+
   const [studentId, setStudentId] = useState(() => localStorage.getItem(STUDENT_ID_KEY) || '');
   const [activeTab, setActiveTab] = useState<Tab>('classes');
   const [viewingHoldId, setViewingHoldId] = useState<string | null>(null);
   const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
+  const [previousSource, setPreviousSource] = useState<PreviousSource>('classes');
 
   // Admin state
   const [isAdmin, setIsAdmin] = useState(() => localStorage.getItem(IS_ADMIN_KEY) === 'true');
@@ -27,14 +42,31 @@ function App() {
   }, []);
 
   const handleApplied = (holdId: string) => {
+    setPreviousSource('seatmap');
     setViewingHoldId(holdId);
   };
 
   const handleViewHold = (holdId: string) => {
+    setPreviousSource(activeTab === 'my-applications' ? 'my-applications' : 'seatmap');
     setViewingHoldId(holdId);
   };
 
-  const handleBack = () => {
+  // Immediate previous page navigation from payment/hold view
+  const handleBackFromHold = () => {
+    setViewingHoldId(null);
+    if (previousSource === 'seatmap' && selectedClassId) {
+      setActiveTab('classes');
+      // keep selectedClassId active so user returns directly to that class seat map!
+    } else if (previousSource === 'my-applications') {
+      setActiveTab('my-applications');
+      setSelectedClassId(null);
+    } else {
+      setActiveTab('classes');
+      setSelectedClassId(null);
+    }
+  };
+
+  const handleBackToDashboard = () => {
     setViewingHoldId(null);
     setSelectedClassId(null);
     setActiveTab('classes');
@@ -63,7 +95,7 @@ function App() {
       <header style={styles.header}>
         <div style={styles.headerInner}>
           {/* Brand with Onnorokom Logo */}
-          <div style={styles.brand} onClick={handleBack}>
+          <div style={styles.brand} onClick={handleBackToDashboard}>
             <div style={styles.logoBadge}>
               <img
                 src="/logo.jpg"
@@ -72,34 +104,44 @@ function App() {
               />
             </div>
             <div>
-              <div style={styles.brandName}>ONNOROKOM ACADEMY</div>
-              <div style={styles.brandTag}>অনন্যরকম একাডেমি • Online Admission Portal</div>
+              <div style={styles.brandName}>{t.brandName}</div>
+              <div style={styles.brandTag}>{t.brandTag}</div>
             </div>
           </div>
 
+          {/* Right Header Controls: Language Toggle & Admin Login */}
+          <div style={styles.rightSection}>
+            {/* Language Switcher */}
+            <div style={styles.langToggle}>
+              <button
+                type="button"
+                onClick={() => setLang('en')}
+                style={{
+                  ...styles.langBtn,
+                  background: lang === 'en' ? 'var(--primary)' : 'transparent',
+                  color: lang === 'en' ? '#ffffff' : 'var(--slate-600)',
+                  fontWeight: lang === 'en' ? 700 : 500,
+                }}
+              >
+                EN
+              </button>
+              <button
+                type="button"
+                onClick={() => setLang('bn')}
+                style={{
+                  ...styles.langBtn,
+                  background: lang === 'bn' ? 'var(--primary)' : 'transparent',
+                  color: lang === 'bn' ? '#ffffff' : 'var(--slate-600)',
+                  fontWeight: lang === 'bn' ? 700 : 500,
+                }}
+              >
+                বাং
+              </button>
+            </div>
 
-
-          {/* Upper Right Corner: Student Pill & Admin Login / Profile */}
-          <div style={styles.adminSection}>
-            {studentId && (
-              <div style={styles.studentActivePill}>
-                <span style={{ fontSize: '0.9rem' }}>🎓</span>
-                <span style={styles.studentPillText}>Student ID: {studentId}</span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setStudentId('');
-                    localStorage.removeItem(STUDENT_ID_KEY);
-                  }}
-                  style={styles.studentPillClear}
-                  title="Clear active Student ID"
-                >
-                  ✕
-                </button>
-              </div>
-            )}
+            {/* Admin Controls */}
             {isAdmin ? (
-              <div style={styles.adminLoggedInRow}>
+              <div style={styles.adminGroup}>
                 <button
                   type="button"
                   onClick={() => {
@@ -108,19 +150,19 @@ function App() {
                     setActiveTab('admin');
                   }}
                   style={{
-                    ...styles.adminModeBtn,
+                    ...styles.adminBtn,
                     background: activeTab === 'admin' ? 'var(--primary-dark)' : 'var(--primary)',
                   }}
                 >
-                  🛡️ Admin Portal
+                  {t.adminPortal}
                 </button>
                 <button
                   type="button"
                   onClick={handleLogout}
-                  style={styles.logoutPill}
-                  title="Sign out of admin mode"
+                  style={styles.logoutBtn}
+                  title={t.logout}
                 >
-                  🚪 Logout
+                  {t.logout}
                 </button>
               </div>
             ) : (
@@ -130,20 +172,19 @@ function App() {
                 className="btn btn-outline"
                 style={styles.adminLoginBtn}
               >
-                🔐 Admin Login
+                {t.adminLogin}
               </button>
             )}
           </div>
         </div>
       </header>
 
-      {/* Main Navigation Tabs (when not in application detail view) */}
+      {/* Main Navigation Tabs */}
       {!viewingHoldId && (
         <nav style={styles.navBar}>
           <div style={styles.navInner}>
             <TabButton
-              icon="🏫"
-              label="Academic Classes"
+              label={t.classesTab}
               active={activeTab === 'classes'}
               onClick={() => {
                 setSelectedClassId(null);
@@ -151,15 +192,13 @@ function App() {
               }}
             />
             <TabButton
-              icon="📋"
-              label="My Applications"
+              label={t.myAppsTab}
               active={activeTab === 'my-applications'}
               onClick={() => setActiveTab('my-applications')}
             />
             {isAdmin && (
               <TabButton
-                icon="⚙️"
-                label="Admin Portal & Shifts"
+                label={t.adminTab}
                 active={activeTab === 'admin'}
                 onClick={() => setActiveTab('admin')}
               />
@@ -175,22 +214,17 @@ function App() {
             <ApplicationDetail
               holdId={viewingHoldId}
               studentId={studentId}
-              onBack={handleBack}
+              lang={lang}
+              onBack={handleBackFromHold}
             />
           ) : (
             <>
               {activeTab === 'classes' && (
                 <ClassList
                   studentId={studentId}
+                  lang={lang}
                   onApplied={handleApplied}
                   onViewHold={handleViewHold}
-                  onGoToCreate={() => {
-                    if (isAdmin) {
-                      setActiveTab('admin');
-                    } else {
-                      setIsLoginModalOpen(true);
-                    }
-                  }}
                   onUpdateStudentId={setStudentId}
                   selectedClassId={selectedClassId}
                   onSelectClass={setSelectedClassId}
@@ -200,6 +234,7 @@ function App() {
               {activeTab === 'my-applications' && (
                 <MyApplications
                   studentId={studentId}
+                  lang={lang}
                   onViewHold={handleViewHold}
                   onGoToClasses={() => setActiveTab('classes')}
                   onUpdateStudentId={setStudentId}
@@ -228,14 +263,14 @@ function App() {
       <footer style={styles.footer}>
         <div style={styles.footerInner}>
           <div style={styles.footerBrand}>
-            <strong>Onnorokom Academy Online Admission System</strong>
-            <span> • First-Come, First-Served Concurrency Engine</span>
+            <strong>{t.brandName}</strong>
+            <span> • {t.brandTag}</span>
           </div>
           <div style={styles.techBadges}>
-            <span style={styles.techPill}>.NET 10 Minimal API</span>
-            <span style={styles.techPill}>PostgreSQL 16 (Row Lock)</span>
-            <span style={styles.techPill}>React 18 + Vite</span>
-            <span style={styles.techPill}>Docker Compose</span>
+            <span style={styles.techPill}>.NET 10</span>
+            <span style={styles.techPill}>PostgreSQL 16</span>
+            <span style={styles.techPill}>React 18</span>
+            <span style={styles.techPill}>Docker</span>
           </div>
         </div>
       </footer>
@@ -244,12 +279,10 @@ function App() {
 }
 
 function TabButton({
-  icon,
   label,
   active,
   onClick,
 }: {
-  icon: string;
   label: string;
   active: boolean;
   onClick: () => void;
@@ -262,11 +295,10 @@ function TabButton({
         color: active ? 'var(--primary)' : 'var(--slate-600)',
         borderBottom: active ? '2.5px solid var(--primary)' : '2.5px solid transparent',
         fontWeight: active ? 700 : 500,
-        background: active ? 'rgba(30, 107, 184, 0.06)' : 'transparent',
+        background: active ? 'rgba(30, 107, 184, 0.05)' : 'transparent',
       }}
       type="button"
     >
-      <span style={{ fontSize: '1.05rem' }}>{icon}</span>
       <span>{label}</span>
     </button>
   );
@@ -285,28 +317,29 @@ const styles: Record<string, React.CSSProperties> = {
     position: 'sticky',
     top: 0,
     zIndex: 100,
-    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)',
+    boxShadow: '0 1px 4px rgba(0, 0, 0, 0.04)',
   },
   headerInner: {
     maxWidth: 1240,
     margin: '0 auto',
-    padding: '0.75rem 1.5rem',
+    padding: '0.65rem 1.25rem',
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    gap: '1.25rem',
-    flexWrap: 'wrap',
+    gap: '1rem',
+    flexWrap: 'nowrap',
   },
   brand: {
     display: 'flex',
     alignItems: 'center',
-    gap: '0.85rem',
+    gap: '0.65rem',
     cursor: 'pointer',
     userSelect: 'none',
+    minWidth: 0,
   },
   logoBadge: {
-    width: 44,
-    height: 44,
+    width: 38,
+    height: 38,
     borderRadius: 'var(--radius-md)',
     overflow: 'hidden',
     boxShadow: 'var(--shadow-sm)',
@@ -315,6 +348,7 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     justifyContent: 'center',
     background: '#ffffff',
+    flexShrink: 0,
   },
   logoImg: {
     width: '100%',
@@ -322,119 +356,110 @@ const styles: Record<string, React.CSSProperties> = {
     objectFit: 'cover',
   },
   brandName: {
-    fontSize: '1.2rem',
+    fontSize: '1.05rem',
     fontWeight: 800,
     color: 'var(--primary)',
     letterSpacing: '-0.02em',
     lineHeight: 1.2,
+    whiteSpace: 'nowrap',
   },
   brandTag: {
-    fontSize: '0.725rem',
+    fontSize: '0.7rem',
     color: 'var(--slate-500)',
     fontWeight: 600,
+    whiteSpace: 'nowrap',
   },
-  studentIdSection: {
-    display: 'flex',
-    alignItems: 'center',
-  },
-  adminSection: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.75rem',
-  },
-  studentActivePill: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: '0.4rem',
-    background: 'var(--primary-light)',
-    border: '1px solid var(--primary-border)',
-    padding: '0.35rem 0.65rem',
-    borderRadius: 'var(--radius-full)',
-    fontFamily: 'var(--font-mono)',
-    fontSize: '0.775rem',
-    color: 'var(--primary-dark)',
-    fontWeight: 600,
-  },
-  studentPillText: {
-    letterSpacing: '0.2px',
-  },
-  studentPillClear: {
-    background: 'none',
-    border: 'none',
-    color: 'var(--primary)',
-    cursor: 'pointer',
-    fontSize: '0.75rem',
-    padding: '0.1rem 0.2rem',
-    lineHeight: 1,
-    opacity: 0.7,
-  },
-  adminLoggedInRow: {
+  rightSection: {
     display: 'flex',
     alignItems: 'center',
     gap: '0.5rem',
+    flexShrink: 0,
   },
-  adminModeBtn: {
-    color: '#ffffff',
-    border: 'none',
-    padding: '0.5rem 0.9rem',
+  langToggle: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    background: 'var(--slate-100)',
+    border: '1px solid var(--slate-200)',
     borderRadius: 'var(--radius-md)',
-    fontSize: '0.85rem',
-    fontWeight: 700,
+    padding: '2px',
+  },
+  langBtn: {
+    padding: '0.25rem 0.5rem',
+    border: 'none',
+    borderRadius: 'var(--radius-sm)',
+    fontSize: '0.75rem',
     cursor: 'pointer',
-    boxShadow: '0 2px 6px rgba(30, 107, 184, 0.3)',
     transition: 'all 0.15s ease',
   },
-  logoutPill: {
+  adminGroup: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.35rem',
+  },
+  adminBtn: {
+    color: '#ffffff',
+    border: 'none',
+    padding: '0.45rem 0.75rem',
+    borderRadius: 'var(--radius-md)',
+    fontSize: '0.8rem',
+    fontWeight: 700,
+    cursor: 'pointer',
+    boxShadow: '0 1px 3px rgba(30, 107, 184, 0.25)',
+    transition: 'all 0.15s ease',
+    whiteSpace: 'nowrap',
+  },
+  logoutBtn: {
     background: 'var(--slate-100)',
     border: '1px solid var(--slate-200)',
     color: 'var(--slate-600)',
-    padding: '0.5rem 0.75rem',
+    padding: '0.45rem 0.65rem',
     borderRadius: 'var(--radius-md)',
-    fontSize: '0.8rem',
+    fontSize: '0.775rem',
     fontWeight: 600,
     cursor: 'pointer',
     transition: 'all 0.15s ease',
+    whiteSpace: 'nowrap',
   },
   adminLoginBtn: {
-    padding: '0.5rem 1rem',
-    fontSize: '0.875rem',
+    padding: '0.45rem 0.85rem',
+    fontSize: '0.8rem',
     fontWeight: 700,
     borderColor: 'var(--primary-border)',
     color: 'var(--primary)',
     background: 'var(--primary-light)',
+    whiteSpace: 'nowrap',
   },
   navBar: {
     background: '#ffffff',
     borderBottom: '1px solid var(--slate-200)',
-    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.02)',
+    boxShadow: '0 1px 2px rgba(0, 0, 0, 0.02)',
   },
   navInner: {
     maxWidth: 1240,
     margin: '0 auto',
-    padding: '0 1.5rem',
+    padding: '0 1.25rem',
     display: 'flex',
-    gap: '0.5rem',
+    gap: '0.25rem',
   },
   tabBtn: {
     display: 'inline-flex',
     alignItems: 'center',
-    gap: '0.5rem',
-    padding: '0.85rem 1.25rem',
+    padding: '0.75rem 1rem',
     border: 'none',
     cursor: 'pointer',
-    fontSize: '0.925rem',
+    fontSize: '0.875rem',
     fontFamily: 'inherit',
     transition: 'all 0.15s ease',
     whiteSpace: 'nowrap',
   },
   main: {
     flex: 1,
-    minHeight: 'calc(100vh - 180px)',
+    minHeight: 'calc(100vh - 160px)',
   },
   footer: {
     background: '#ffffff',
     borderTop: '1px solid var(--slate-200)',
-    padding: '1.5rem',
+    padding: '1.25rem',
     marginTop: 'auto',
   },
   footerInner: {
@@ -445,7 +470,7 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     gap: '1rem',
     flexWrap: 'wrap',
-    fontSize: '0.825rem',
+    fontSize: '0.8rem',
     color: 'var(--slate-500)',
   },
   footerBrand: {
@@ -453,15 +478,15 @@ const styles: Record<string, React.CSSProperties> = {
   },
   techBadges: {
     display: 'flex',
-    gap: '0.5rem',
+    gap: '0.4rem',
     flexWrap: 'wrap',
   },
   techPill: {
     background: 'var(--slate-100)',
     border: '1px solid var(--slate-200)',
-    padding: '0.2rem 0.55rem',
+    padding: '0.15rem 0.45rem',
     borderRadius: 'var(--radius-sm)',
-    fontSize: '0.75rem',
+    fontSize: '0.725rem',
     fontWeight: 600,
     fontFamily: 'var(--font-mono)',
     color: 'var(--slate-600)',

@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { apiFetch, friendlyError } from '../api/client';
 import { ClassInfo, MyHold } from '../types';
+import { Language, translations } from '../i18n';
 
 interface ClassSeatMapProps {
   classInfo: ClassInfo;
   studentId: string;
+  lang?: Language;
   onBack: () => void;
   onApplied: (holdId: string) => void;
   onViewHold: (holdId: string) => void;
@@ -14,11 +16,13 @@ interface ClassSeatMapProps {
 export function ClassSeatMap({
   classInfo,
   studentId,
+  lang = 'en',
   onBack,
   onApplied,
   onViewHold,
   onUpdateStudentId,
 }: ClassSeatMapProps) {
+  const t = translations[lang] || translations.en;
   const [currentClass, setCurrentClass] = useState<ClassInfo>(classInfo);
   const [applying, setApplying] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -96,7 +100,7 @@ export function ClassSeatMap({
     }
   };
 
-  // Click on an available seat
+  // Click on a seat
   const handleSeatClick = (seatIndex: number, status: 'AVAILABLE' | 'HELD' | 'CONFIRMED', isUserHeld: boolean) => {
     setError(null);
     if (isUserHeld && userActiveHold) {
@@ -110,7 +114,6 @@ export function ClassSeatMap({
     }
 
     if (status === 'HELD') {
-      // Trigger held seat recovery modal
       setHeldSeatModalNumber(seatIndex);
       setHeldModalInputId(studentId || '');
       setHeldModalError(null);
@@ -147,7 +150,7 @@ export function ClassSeatMap({
         setHeldSeatModalNumber(null);
         onViewHold(activeMatch.holdId);
       } else {
-        setHeldModalError(`No active reservation found for ID ${cleanId} in this class. This seat is held by another applicant.`);
+        setHeldModalError(`No active reservation found for ID ${cleanId} in this class.`);
       }
     } catch (err: any) {
       setHeldModalError(friendlyError(err));
@@ -170,20 +173,17 @@ export function ClassSeatMap({
       status = 'AVAILABLE';
     }
 
-    // Is this the seat held by the current user?
     const isUserHeld = Boolean(userActiveHold && status === 'HELD' && seatNum === confirmedSeats + 1);
-
     return { seatNum, status, isUserHeld };
   });
 
   return (
     <div style={styles.container} className="animate-fade-in">
-      {/* Top Navigation & Title */}
+      {/* Top Navigation */}
       <div style={styles.topNav}>
         <button onClick={onBack} className="btn btn-outline" style={styles.backBtn} type="button">
-          ← Back to All Classes
+          {t.backToClasses}
         </button>
-        
       </div>
 
       {/* Class Hero Banner */}
@@ -191,25 +191,23 @@ export function ClassSeatMap({
         <div style={styles.heroContent}>
           <div>
             <div style={styles.shiftBadgeRow}>
-              <span style={styles.classLevelBadge}>Academic Class</span>
-              <span style={styles.shiftBadge}>{currentClass.name}</span>
+              <span style={styles.classLevelBadge}>{t.academicClass}</span>
             </div>
             <h1 style={styles.heroTitle}>{currentClass.name}</h1>
-            
           </div>
 
           <div style={styles.heroRight}>
             {userActiveHold ? (
               <div style={styles.userHoldBanner}>
-                <span style={styles.userHoldTitle}>🌟 Your Seat is Reserved!</span>
-                <p style={styles.userHoldSub}>Payment countdown is currently running.</p>
+                <span style={styles.userHoldTitle}>{t.yourSeatReserved}</span>
+                <p style={styles.userHoldSub}>{t.countdownRunning}</p>
                 <button
                   type="button"
                   onClick={() => onViewHold(userActiveHold.holdId)}
                   className="btn btn-success"
-                  style={{ width: '100%', marginTop: '0.4rem', fontSize: '0.85rem' }}
+                  style={{ width: '100%', marginTop: '0.5rem', fontSize: '0.85rem' }}
                 >
-                  💳 Resume Payment Now →
+                  {t.resumePaymentNow}
                 </button>
               </div>
             ) : (
@@ -223,7 +221,7 @@ export function ClassSeatMap({
                 className="btn btn-primary"
                 style={styles.heroApplyBtn}
               >
-                {applying ? 'Holding Seat...' : availableSeats === 0 ? 'Seat Full' : '⚡ Apply for Available Seat'}
+                {applying ? t.holdingSeat : availableSeats === 0 ? t.seatFull : t.applyForAvailableSeat}
               </button>
             )}
           </div>
@@ -232,19 +230,19 @@ export function ClassSeatMap({
         {/* Global Class Stat Pills */}
         <div style={styles.statPillsRow}>
           <div style={styles.statPillItem}>
-            <span style={styles.statPillLabel}>Total Seats</span>
+            <span style={styles.statPillLabel}>{t.total}</span>
             <span style={styles.statPillVal}>{totalSeats}</span>
           </div>
           <div style={{ ...styles.statPillItem, background: 'var(--seat-avail-bg)', borderColor: 'var(--seat-avail-border)' }}>
-            <span style={{ ...styles.statPillLabel, color: 'var(--primary)' }}>Available Seats</span>
+            <span style={{ ...styles.statPillLabel, color: 'var(--primary)' }}>{t.available}</span>
             <span style={{ ...styles.statPillVal, color: 'var(--primary)' }}>{availableSeats}</span>
           </div>
           <div style={{ ...styles.statPillItem, background: 'var(--seat-held-bg)', borderColor: 'var(--seat-held-border)' }}>
-            <span style={{ ...styles.statPillLabel, color: 'var(--warning-dark)' }}>Currently Held</span>
+            <span style={{ ...styles.statPillLabel, color: 'var(--warning-dark)' }}>{t.held}</span>
             <span style={{ ...styles.statPillVal, color: 'var(--warning-dark)' }}>{heldSeats}</span>
           </div>
           <div style={{ ...styles.statPillItem, background: 'var(--seat-conf-bg)', borderColor: 'var(--seat-conf-border)' }}>
-            <span style={{ ...styles.statPillLabel, color: 'var(--success-dark)' }}>Confirmed</span>
+            <span style={{ ...styles.statPillLabel, color: 'var(--success-dark)' }}>{t.confirmed}</span>
             <span style={{ ...styles.statPillVal, color: 'var(--success-dark)' }}>{confirmedSeats}</span>
           </div>
         </div>
@@ -252,38 +250,30 @@ export function ClassSeatMap({
 
       {error && (
         <div style={styles.errorAlert} className="animate-fade-in">
-          <span>⚠️ {error}</span>
-          <button onClick={() => setError(null)} style={styles.alertClose}>✕</button>
+          <span>{error}</span>
+          <button onClick={() => setError(null)} style={styles.alertClose}>Cancel</button>
         </div>
       )}
 
-      {/* Classroom Visualization Card */}
+      {/* Classroom Visualization Card without blackboard */}
       <div className="card" style={styles.classroomCard}>
-        {/* Legend */}
+        {/* Modern Clean Legend with Dots (No Emojis) */}
         <div style={styles.legendRow}>
           <div style={styles.legendItem}>
-            <div className="seat-button available" style={{ width: 28, height: 28, fontSize: '0.65rem' }}>#</div>
-            <span>Available (Click to Hold)</span>
+            <span style={{ ...styles.legendDot, background: 'var(--primary)' }} />
+            <span>{t.legendAvailable}</span>
           </div>
           <div style={styles.legendItem}>
-            <div className="seat-button held" style={{ width: 28, height: 28, fontSize: '0.65rem' }}>#</div>
-            <span>Held (In Countdown - Click to resume)</span>
+            <span style={{ ...styles.legendDot, background: 'var(--warning-dark)' }} />
+            <span>{t.legendHeld}</span>
           </div>
           <div style={styles.legendItem}>
-            <div className="seat-button confirmed" style={{ width: 28, height: 28, fontSize: '0.65rem' }}>#</div>
-            <span>Confirmed (Admitted)</span>
+            <span style={{ ...styles.legendDot, background: 'var(--success-dark)' }} />
+            <span>{t.legendConfirmed}</span>
           </div>
           <div style={styles.legendItem}>
-            <div className="seat-button user-held" style={{ width: 28, height: 28, fontSize: '0.65rem' }}>★</div>
-            <span>Your Active Hold</span>
-          </div>
-        </div>
-
-        {/* Blackboard Front Indicator */}
-        <div style={styles.blackboard}>
-          <div style={styles.boardInner}>
-            <span style={styles.boardIcon}>📚</span>
-            <span>CLASSROOM FRONT • BLACKBOARD & INSTRUCTOR PODIUM</span>
+            <span style={{ ...styles.legendDot, background: '#f59e0b', boxShadow: '0 0 0 2px #d97706' }} />
+            <span>{t.legendUserHeld}</span>
           </div>
         </div>
 
@@ -298,44 +288,41 @@ export function ClassSeatMap({
                 className={`seat-button ${status.toLowerCase()} ${isUserHeld ? 'user-held' : ''}`}
                 title={`Seat #${seatNum} - ${status}`}
               >
-                <span style={{ fontSize: '0.75rem' }}>#{seatNum}</span>
-                {isUserHeld && <span style={styles.youBadge}>YOU</span>}
+                <span style={{ fontSize: '0.8rem' }}>{seatNum}</span>
+                {isUserHeld && <span style={styles.youBadge}>{lang === 'bn' ? 'আপনি' : 'YOU'}</span>}
               </button>
             ))}
           </div>
         </div>
       </div>
 
-      {/* Apply Modal (when clicking an available seat without student ID) */}
+      {/* Apply Modal */}
       {applyModalSeat && (
         <div className="modal-backdrop" onClick={() => setApplyModalSeat(null)}>
           <div className="modal-dialog animate-slide-up" onClick={e => e.stopPropagation()}>
             <div style={styles.modalHeader}>
-              <span style={{ fontSize: '1.5rem' }}>🎓</span>
               <div>
-                <h3 style={styles.modalTitle}>Reserve Seat #{applyModalSeat}</h3>
+                <h3 style={styles.modalTitle}>{t.reserveSeatTitle} #{applyModalSeat}</h3>
                 <p style={styles.modalSub}>{currentClass.name}</p>
               </div>
               <button onClick={() => setApplyModalSeat(null)} style={styles.modalClose}>✕</button>
             </div>
             <div style={styles.modalBody}>
-              <p style={styles.modalDesc}>
-                Enter your <strong>17-digit Birth Registration Number</strong> to place this seat on temporary hold for payment.
-              </p>
+              <p style={styles.modalDesc}>{t.reserveNotice}</p>
               <div style={styles.field}>
-                <label style={styles.label}>17-Digit Student Birth Certificate Number</label>
+                <label style={styles.label}>{t.birthCertLabel}</label>
                 <input
                   type="text"
                   maxLength={17}
                   value={modalStudentId}
                   onChange={e => setModalStudentId(e.target.value.replace(/\D/g, ''))}
-                  placeholder="e.g. 20152691234567890"
+                  placeholder="20152691234567890"
                   style={styles.modalInput}
                   autoFocus
                 />
                 <div style={styles.digitHint}>
-                  <span>{modalStudentId.length} / 17 digits</span>
-                  {modalStudentId.length === 17 && <span style={{ color: 'var(--success-dark)' }}>✓ Valid 17-digit ID</span>}
+                  <span>{modalStudentId.length} / 17 {t.digitsUnit}</span>
+                  {modalStudentId.length === 17 && <span style={{ color: 'var(--success-dark)' }}>{t.validIdBadge}</span>}
                 </div>
               </div>
 
@@ -346,7 +333,7 @@ export function ClassSeatMap({
                   className="btn btn-outline"
                   style={{ flex: 1 }}
                 >
-                  Cancel
+                  {t.cancelBtn}
                 </button>
                 <button
                   type="button"
@@ -355,7 +342,7 @@ export function ClassSeatMap({
                   className="btn btn-primary"
                   style={{ flex: 2 }}
                 >
-                  {applying ? 'Holding Seat...' : 'Confirm & Hold Seat →'}
+                  {applying ? t.holdingSeat : t.confirmHoldBtn}
                 </button>
               </div>
             </div>
@@ -368,38 +355,33 @@ export function ClassSeatMap({
         <div className="modal-backdrop" onClick={() => setHeldSeatModalNumber(null)}>
           <div className="modal-dialog animate-slide-up" onClick={e => e.stopPropagation()}>
             <div style={styles.modalHeader}>
-              <span style={{ fontSize: '1.5rem' }}>🟡</span>
               <div>
-                <h3 style={styles.modalTitle}>Held Seat #{heldSeatModalNumber}</h3>
+                <h3 style={styles.modalTitle}>{t.heldSeatTitle} #{heldSeatModalNumber}</h3>
                 <p style={styles.modalSub}>{currentClass.name}</p>
               </div>
               <button onClick={() => setHeldSeatModalNumber(null)} style={styles.modalClose}>✕</button>
             </div>
 
             <form onSubmit={handleVerifyHeldSeat} style={styles.modalBody}>
-              <p style={styles.modalDesc}>
-                This seat is currently held under an active reservation countdown. If you made this hold, enter your 17-digit Birth Registration Number to resume payment.
-              </p>
+              <p style={styles.modalDesc}>{t.heldSeatNotice}</p>
 
               {heldModalError && (
-                <div style={styles.modalAlert}>
-                  ⚠️ {heldModalError}
-                </div>
+                <div style={styles.modalAlert}>{heldModalError}</div>
               )}
 
               <div style={styles.field}>
-                <label style={styles.label}>Enter your 17-Digit Birth Certificate Number</label>
+                <label style={styles.label}>{t.birthCertLabel}</label>
                 <input
                   type="text"
                   maxLength={17}
                   value={heldModalInputId}
                   onChange={e => setHeldModalInputId(e.target.value.replace(/\D/g, ''))}
-                  placeholder="e.g. 20152691234567890"
+                  placeholder="20152691234567890"
                   style={styles.modalInput}
                   autoFocus
                 />
                 <div style={styles.digitHint}>
-                  <span>{heldModalInputId.length} / 17 digits</span>
+                  <span>{heldModalInputId.length} / 17 {t.digitsUnit}</span>
                 </div>
               </div>
 
@@ -410,7 +392,7 @@ export function ClassSeatMap({
                   className="btn btn-outline"
                   style={{ flex: 1 }}
                 >
-                  Cancel
+                  {t.cancelBtn}
                 </button>
                 <button
                   type="submit"
@@ -418,7 +400,7 @@ export function ClassSeatMap({
                   className="btn btn-primary"
                   style={{ flex: 2 }}
                 >
-                  {heldModalChecking ? 'Verifying...' : 'Verify & Resume Payment →'}
+                  {heldModalChecking ? t.verifying : t.verifyResumeBtn}
                 </button>
               </div>
             </form>
@@ -433,49 +415,37 @@ const styles: Record<string, React.CSSProperties> = {
   container: {
     maxWidth: 1240,
     margin: '0 auto',
-    padding: '2rem 1.5rem',
+    padding: '1.5rem',
   },
   topNav: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: '1.5rem',
-    flexWrap: 'wrap',
-    gap: '1rem',
+    marginBottom: '1rem',
   },
   backBtn: {
-    padding: '0.5rem 1rem',
-    fontSize: '0.875rem',
+    padding: '0.45rem 0.9rem',
+    fontSize: '0.85rem',
     fontWeight: 700,
   },
-  liveBadge: {
-    fontFamily: 'var(--font-mono)',
-    fontSize: '0.75rem',
-    fontWeight: 600,
-    color: 'var(--slate-500)',
-    background: 'var(--slate-100)',
-    padding: '0.25rem 0.65rem',
-    borderRadius: 'var(--radius-full)',
-    border: '1px solid var(--slate-200)',
-  },
   heroCard: {
-    padding: '2rem',
-    marginBottom: '1.75rem',
+    padding: '1.5rem',
+    marginBottom: '1.25rem',
     background: '#ffffff',
   },
   heroContent: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    gap: '1.5rem',
-    marginBottom: '1.5rem',
+    gap: '1.25rem',
+    marginBottom: '1.25rem',
     flexWrap: 'wrap',
   },
   shiftBadgeRow: {
     display: 'flex',
     gap: '0.5rem',
     alignItems: 'center',
-    marginBottom: '0.4rem',
+    marginBottom: '0.35rem',
   },
   classLevelBadge: {
     fontSize: '0.75rem',
@@ -486,39 +456,26 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: 'var(--radius-full)',
     textTransform: 'uppercase',
   },
-  shiftBadge: {
-    fontSize: '0.75rem',
-    fontWeight: 700,
-    background: 'var(--slate-100)',
-    color: 'var(--slate-700)',
-    padding: '0.2rem 0.6rem',
-    borderRadius: 'var(--radius-full)',
-  },
   heroTitle: {
-    fontSize: '1.75rem',
+    fontSize: '1.65rem',
     fontWeight: 800,
     color: 'var(--slate-900)',
     letterSpacing: '-0.02em',
-    marginBottom: '0.35rem',
-  },
-  heroSubtitle: {
-    fontSize: '0.925rem',
-    color: 'var(--slate-500)',
-    maxWidth: 620,
+    margin: 0,
   },
   heroRight: {
-    minWidth: 260,
+    minWidth: 240,
   },
   heroApplyBtn: {
-    padding: '0.85rem 1.5rem',
-    fontSize: '1rem',
+    padding: '0.75rem 1.25rem',
+    fontSize: '0.95rem',
     width: '100%',
   },
   userHoldBanner: {
     background: 'var(--warning-light)',
     border: '1px solid var(--warning-border)',
     borderRadius: 'var(--radius-md)',
-    padding: '0.85rem 1rem',
+    padding: '0.75rem 1rem',
   },
   userHoldTitle: {
     fontSize: '0.85rem',
@@ -533,16 +490,16 @@ const styles: Record<string, React.CSSProperties> = {
   },
   statPillsRow: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-    gap: '0.75rem',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
+    gap: '0.65rem',
     borderTop: '1px solid var(--slate-100)',
-    paddingTop: '1.25rem',
+    paddingTop: '1rem',
   },
   statPillItem: {
     background: 'var(--slate-50)',
     border: '1px solid var(--slate-200)',
     borderRadius: 'var(--radius-md)',
-    padding: '0.65rem 1rem',
+    padding: '0.6rem 0.85rem',
     display: 'flex',
     flexDirection: 'column',
     gap: '0.15rem',
@@ -563,71 +520,58 @@ const styles: Record<string, React.CSSProperties> = {
     background: 'var(--danger-light)',
     border: '1px solid var(--danger-border)',
     color: 'var(--danger-dark)',
-    padding: '0.85rem 1.25rem',
+    padding: '0.75rem 1rem',
     borderRadius: 'var(--radius-md)',
-    marginBottom: '1.5rem',
+    marginBottom: '1rem',
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
     fontWeight: 600,
+    fontSize: '0.875rem',
   },
   alertClose: {
     background: 'none',
     border: 'none',
     color: 'var(--danger-dark)',
     cursor: 'pointer',
-    fontSize: '1rem',
+    fontSize: '0.8rem',
+    fontWeight: 600,
   },
   classroomCard: {
-    padding: '2rem',
+    padding: '1.5rem',
     background: '#ffffff',
   },
   legendRow: {
     display: 'flex',
-    gap: '1.5rem',
+    gap: '1.25rem',
     flexWrap: 'wrap',
-    marginBottom: '2rem',
-    paddingBottom: '1.25rem',
+    marginBottom: '1.5rem',
+    paddingBottom: '1rem',
     borderBottom: '1px solid var(--slate-100)',
   },
   legendItem: {
     display: 'flex',
     alignItems: 'center',
-    gap: '0.5rem',
+    gap: '0.45rem',
     fontSize: '0.8rem',
     color: 'var(--slate-600)',
     fontWeight: 600,
   },
-  blackboard: {
-    background: 'linear-gradient(180deg, #1e293b 0%, #0f172a 100%)',
-    borderRadius: 'var(--radius-md)',
-    padding: '0.85rem',
-    textAlign: 'center',
-    marginBottom: '2.5rem',
-    boxShadow: '0 4px 10px rgba(15, 23, 42, 0.2)',
-  },
-  boardInner: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: '0.65rem',
-    color: '#e2e8f0',
-    fontFamily: 'var(--font-mono)',
-    fontSize: '0.8rem',
-    fontWeight: 700,
-    letterSpacing: '1px',
-  },
-  boardIcon: {
-    fontSize: '1rem',
+  legendDot: {
+    width: 10,
+    height: 10,
+    borderRadius: '50%',
+    display: 'inline-block',
   },
   gridContainer: {
     overflowX: 'auto',
-    paddingBottom: '1rem',
+    paddingBottom: '0.5rem',
   },
   seatGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(46px, 1fr))',
-    gap: '0.75rem',
-    minWidth: '280px',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(44px, 1fr))',
+    gap: '0.65rem',
+    minWidth: '260px',
   },
   youBadge: {
     fontSize: '0.55rem',
@@ -641,8 +585,7 @@ const styles: Record<string, React.CSSProperties> = {
     borderBottom: '1px solid var(--slate-200)',
     display: 'flex',
     alignItems: 'center',
-    gap: '0.85rem',
-    position: 'relative',
+    justifyContent: 'space-between',
     background: 'var(--slate-50)',
   },
   modalTitle: {
@@ -657,12 +600,9 @@ const styles: Record<string, React.CSSProperties> = {
     marginTop: '0.15rem',
   },
   modalClose: {
-    position: 'absolute',
-    right: '1.25rem',
-    top: '1.25rem',
     background: 'none',
     border: 'none',
-    fontSize: '1.15rem',
+    fontSize: '1.1rem',
     color: 'var(--slate-400)',
     cursor: 'pointer',
   },

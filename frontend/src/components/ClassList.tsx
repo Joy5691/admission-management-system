@@ -2,9 +2,11 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { apiFetch, friendlyError } from '../api/client';
 import { ClassInfo } from '../types';
 import { ClassSeatMap } from './ClassSeatMap';
+import { Language, translations } from '../i18n';
 
 interface ClassListProps {
   studentId: string;
+  lang?: Language;
   onApplied: (holdId: string) => void;
   onViewHold?: (holdId: string) => void;
   onGoToCreate?: () => void;
@@ -15,13 +17,14 @@ interface ClassListProps {
 
 export function ClassList({
   studentId,
+  lang = 'en',
   onApplied,
   onViewHold = () => {},
-  onGoToCreate,
   onUpdateStudentId = () => {},
   selectedClassId: externalSelectedClassId,
   onSelectClass: externalOnSelectClass,
 }: ClassListProps) {
+  const t = translations[lang] || translations.en;
   const [internalSelectedClassId, setInternalSelectedClassId] = useState<string | null>(null);
 
   const selectedClassId = externalSelectedClassId !== undefined ? externalSelectedClassId : internalSelectedClassId;
@@ -32,13 +35,18 @@ export function ClassList({
 
   const [classes, setClasses] = useState<ClassInfo[]>([]);
   const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+
+  // Quick Filter Mode: ALL or OPEN seats only
+  const [filterMode, setFilterMode] = useState<'ALL' | 'OPEN'>('ALL');
+
+  const openClasses = useMemo(() => classes.filter(c => c.availableSeats > 0), [classes]);
 
   // Fetch classes
   const loadClasses = async (isInitial = false) => {
     if (isInitial) setLoading(true);
-        try {
+    try {
       const data: ClassInfo[] = await apiFetch('/classes');
       setClasses(data);
       setError(null);
@@ -46,7 +54,7 @@ export function ClassList({
       if (isInitial) setError(friendlyError(err));
     } finally {
       if (isInitial) setLoading(false);
-          }
+    }
   };
 
   useEffect(() => {
@@ -54,11 +62,6 @@ export function ClassList({
     const interval = setInterval(() => loadClasses(false), 4000);
     return () => clearInterval(interval);
   }, []);
-
-  // Quick Filter Mode: ALL or OPEN seats only
-  const [filterMode, setFilterMode] = useState<'ALL' | 'OPEN'>('ALL');
-
-  const openClasses = useMemo(() => classes.filter(c => c.availableSeats > 0), [classes]);
 
   const filtered = useMemo(() => {
     let list = classes;
@@ -70,7 +73,6 @@ export function ClassList({
     return list.filter(c => c.name.toLowerCase().includes(term));
   }, [classes, filterMode, search]);
 
-
   // If a class is selected, show its interactive seat map
   const activeClass = classes.find(c => c.id === selectedClassId);
   if (selectedClassId && activeClass) {
@@ -78,6 +80,7 @@ export function ClassList({
       <ClassSeatMap
         classInfo={activeClass}
         studentId={studentId}
+        lang={lang}
         onBack={() => setSelectedClassId(null)}
         onApplied={onApplied}
         onViewHold={onViewHold}
@@ -91,13 +94,13 @@ export function ClassList({
       {/* Top Banner & Suggested Classes */}
       <div style={styles.headerBanner}>
         <div>
-          <h1 style={styles.title}>Student Admission</h1>
+          <h1 style={styles.title}>{t.studentAdmissionTitle}</h1>
         </div>
 
         {/* Suggested Classes with Available Seats */}
         {openClasses.length > 0 && (
           <div style={styles.suggestedContainer}>
-            <span style={styles.suggestedLabel}>Suggested Classes with Open Seats:</span>
+            <span style={styles.suggestedLabel}>{t.suggestedLabel}</span>
             <div style={styles.suggestedPills}>
               {openClasses.map(cls => (
                 <button
@@ -105,11 +108,11 @@ export function ClassList({
                   type="button"
                   onClick={() => setSelectedClassId(cls.id)}
                   style={styles.suggestedPill}
-                  title={`Select ${cls.name} (${cls.availableSeats} seats open)`}
+                  title={`${cls.name} (${cls.availableSeats} ${t.seatsOpen})`}
                 >
                   <span style={styles.suggestedDot} />
                   <strong style={styles.suggestedName}>{cls.name}</strong>
-                  <span style={styles.suggestedBadge}>{cls.availableSeats} seats left</span>
+                  <span style={styles.suggestedBadge}>{cls.availableSeats} {t.seatsLeft}</span>
                 </button>
               ))}
             </div>
@@ -120,12 +123,15 @@ export function ClassList({
       {/* Search & Filter Bar */}
       <div style={styles.controlsBar}>
         <div style={styles.searchWrapper}>
-          <span style={styles.searchIcon}>🔍</span>
+          <svg style={styles.searchSvg} viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" strokeWidth="2" fill="none">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
           <input
             type="text"
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Search by class or shift (e.g. Morning, Class 6, KG)..."
+            placeholder={t.searchPlaceholder}
             style={styles.searchInput}
           />
           {search && (
@@ -145,7 +151,7 @@ export function ClassList({
               fontWeight: filterMode === 'ALL' ? 700 : 500,
             }}
           >
-            All Classes ({classes.length})
+            {t.allClassesFilter} ({classes.length})
           </button>
           <button
             type="button"
@@ -158,7 +164,8 @@ export function ClassList({
               fontWeight: filterMode === 'OPEN' ? 700 : 500,
             }}
           >
-            🟢 Open Seats Only ({openClasses.length})
+            <span style={{ ...styles.suggestedDot, marginRight: 6 }} />
+            {t.openOnlyFilter} ({openClasses.length})
           </button>
         </div>
       </div>
@@ -166,9 +173,9 @@ export function ClassList({
       {/* Error state */}
       {error && (
         <div style={styles.errorAlert}>
-          <span>⚠️ {error}</span>
+          <span>{error}</span>
           <button onClick={() => loadClasses(true)} className="btn btn-outline" style={{ padding: '0.25rem 0.75rem', fontSize: '0.8rem' }}>
-            Retry Connection
+            Retry
           </button>
         </div>
       )}
@@ -177,28 +184,15 @@ export function ClassList({
       {loading ? (
         <div style={styles.emptyState}>
           <div style={styles.spinner} />
-          <p style={{ marginTop: '1rem', color: 'var(--slate-500)', fontWeight: 600 }}>
-            Syncing real-time class occupancy...
-          </p>
         </div>
       ) : filtered.length === 0 ? (
         <div style={styles.emptyState} className="card">
-          <span style={{ fontSize: '2.5rem' }}>🏫</span>
-          <h3 style={{ fontSize: '1.25rem', fontWeight: 800, marginTop: '0.5rem', color: 'var(--slate-800)' }}>
-            {search ? 'No classes matched your search' : 'No academic classes open yet'}
+          <h3 style={{ fontSize: '1.15rem', fontWeight: 800, marginTop: '0.5rem', color: 'var(--slate-800)' }}>
+            {t.noClasses}
           </h3>
-          <p style={{ color: 'var(--slate-500)', fontSize: '0.9rem', maxWidth: 420, margin: '0.4rem 0 1.25rem' }}>
-            {search
-              ? 'Try searching with different keywords like "Morning", "Class 6", or clear the search filter.'
-              : 'Admissions have not been configured yet. Administrators can create the first class module now.'}
-          </p>
-          {search ? (
-            <button onClick={() => setSearch('')} className="btn btn-primary">
-              Clear Search Filter
-            </button>
-          ) : (
-            <button onClick={onGoToCreate} className="btn btn-primary">
-              ➕ Create Academic Class
+          {search && (
+            <button onClick={() => setSearch('')} className="btn btn-primary" style={{ marginTop: '1rem' }}>
+              {t.clearFilter}
             </button>
           )}
         </div>
@@ -210,7 +204,11 @@ export function ClassList({
             const occupancyPct = c.totalSeats > 0 ? Math.round(((c.confirmedSeats + c.heldSeats) / c.totalSeats) * 100) : 0;
             const isMorning = c.name.toLowerCase().includes('morning');
             const isEvening = c.name.toLowerCase().includes('evening');
-            const shiftIcon = isMorning ? '🌅' : isEvening ? '🌙' : '☀️';
+            const shiftName = isMorning
+              ? (lang === 'bn' ? 'মর্নিং শিফট' : 'Morning Shift')
+              : isEvening
+              ? (lang === 'bn' ? 'ইভনিং শিফট' : 'Evening Shift')
+              : (lang === 'bn' ? 'ডে শিফট' : 'Day Shift');
 
             return (
               <div
@@ -221,14 +219,9 @@ export function ClassList({
               >
                 {/* Module Header */}
                 <div style={styles.moduleHeader}>
-                  <div style={styles.moduleTitleGroup}>
-                    <span style={styles.shiftIconBox}>{shiftIcon}</span>
-                    <div>
-                      <h3 style={styles.moduleClassName}>{c.name}</h3>
-                      <span style={styles.moduleShiftTag}>
-                        {isMorning ? 'Morning Shift' : isEvening ? 'Evening Shift' : 'Day Shift'}
-                      </span>
-                    </div>
+                  <div>
+                    <h3 style={styles.moduleClassName}>{c.name}</h3>
+                    <span style={styles.moduleShiftTag}>{shiftName}</span>
                   </div>
 
                   <span
@@ -239,32 +232,38 @@ export function ClassList({
                       borderColor: isFull ? 'var(--danger-border)' : 'var(--success-border)',
                     }}
                   >
-                    {isFull ? '🔴 Capacity Full' : '🟢 Open for Admission'}
+                    <span
+                      style={{
+                        ...styles.statusDot,
+                        background: isFull ? 'var(--danger)' : 'var(--success)',
+                      }}
+                    />
+                    {isFull ? t.capacityFull : t.openForAdmission}
                   </span>
                 </div>
 
                 {/* Seat Metrics Row */}
                 <div style={styles.seatPillRow}>
                   <div style={styles.seatPill}>
-                    <span style={styles.seatPillLabel}>Available</span>
+                    <span style={styles.seatPillLabel}>{t.available}</span>
                     <span style={{ ...styles.seatPillVal, color: 'var(--primary)' }}>
                       {c.availableSeats}
                     </span>
                   </div>
                   <div style={styles.seatPill}>
-                    <span style={styles.seatPillLabel}>Held</span>
+                    <span style={styles.seatPillLabel}>{t.held}</span>
                     <span style={{ ...styles.seatPillVal, color: 'var(--warning-dark)' }}>
                       {c.heldSeats}
                     </span>
                   </div>
                   <div style={styles.seatPill}>
-                    <span style={styles.seatPillLabel}>Confirmed</span>
+                    <span style={styles.seatPillLabel}>{t.confirmed}</span>
                     <span style={{ ...styles.seatPillVal, color: 'var(--success-dark)' }}>
                       {c.confirmedSeats}
                     </span>
                   </div>
                   <div style={styles.seatPill}>
-                    <span style={styles.seatPillLabel}>Total</span>
+                    <span style={styles.seatPillLabel}>{t.total}</span>
                     <span style={styles.seatPillVal}>{c.totalSeats}</span>
                   </div>
                 </div>
@@ -277,19 +276,17 @@ export function ClassList({
                         width: `${(c.confirmedSeats / c.totalSeats) * 100}%`,
                         background: 'var(--success-dark)',
                       }}
-                      title={`Confirmed: ${c.confirmedSeats}`}
                     />
                     <div
                       style={{
                         width: `${(c.heldSeats / c.totalSeats) * 100}%`,
                         background: 'var(--warning)',
                       }}
-                      title={`Held: ${c.heldSeats}`}
                     />
                   </div>
                   <div style={styles.progressLabelRow}>
-                    <span>{occupancyPct}% Occupied</span>
-                    <span>{c.availableSeats} of {c.totalSeats} seats open</span>
+                    <span>{occupancyPct}% {t.occupied}</span>
+                    <span>{c.availableSeats} {t.seatsOpen}</span>
                   </div>
                 </div>
 
@@ -304,7 +301,7 @@ export function ClassList({
                       setSelectedClassId(c.id);
                     }}
                   >
-                    🪑 View Seat Map & Apply →
+                    {t.viewSeatMap}
                   </button>
                 </div>
               </div>
@@ -320,78 +317,34 @@ const styles: Record<string, React.CSSProperties> = {
   container: {
     maxWidth: 1240,
     margin: '0 auto',
-    padding: '2rem 1.5rem',
+    padding: '1.5rem',
   },
   headerBanner: {
     display: 'flex',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    gap: '2rem',
-    marginBottom: '2rem',
+    alignItems: 'center',
+    gap: '1.5rem',
+    marginBottom: '1.5rem',
     flexWrap: 'wrap',
-  },
-  badgeRow: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.75rem',
-    marginBottom: '0.5rem',
-    flexWrap: 'wrap',
-  },
-  liveIndicator: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: '0.4rem',
-    background: 'var(--slate-100)',
-    border: '1px solid var(--slate-200)',
-    padding: '0.2rem 0.65rem',
-    borderRadius: 'var(--radius-full)',
-    fontSize: '0.75rem',
-    fontWeight: 700,
-    fontFamily: 'var(--font-mono)',
-    color: 'var(--slate-600)',
-  },
-  liveDot: {
-    width: 8,
-    height: 8,
-    borderRadius: '50%',
-    background: 'var(--success)',
-    transition: 'opacity 0.2s ease',
-  },
-  protocolBadge: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    background: 'var(--primary-light)',
-    color: 'var(--primary)',
-    border: '1px solid var(--primary-border)',
-    padding: '0.2rem 0.65rem',
-    borderRadius: 'var(--radius-full)',
-    fontSize: '0.75rem',
-    fontWeight: 700,
   },
   title: {
-    fontSize: '1.85rem',
+    fontSize: '1.75rem',
     fontWeight: 800,
     color: 'var(--slate-900)',
     letterSpacing: '-0.025em',
-    marginBottom: '0.35rem',
-  },
-  subtitle: {
-    color: 'var(--slate-500)',
-    fontSize: '0.95rem',
-    maxWidth: 640,
-    lineHeight: 1.5,
+    margin: 0,
   },
   suggestedContainer: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '0.5rem',
+    gap: '0.4rem',
     alignItems: 'flex-start',
   },
   suggestedLabel: {
-    fontSize: '0.75rem',
+    fontSize: '0.725rem',
     fontWeight: 700,
     textTransform: 'uppercase',
-    letterSpacing: '0.5px',
+    letterSpacing: '0.4px',
     color: 'var(--slate-500)',
   },
   suggestedPills: {
@@ -402,72 +355,60 @@ const styles: Record<string, React.CSSProperties> = {
   suggestedPill: {
     display: 'inline-flex',
     alignItems: 'center',
-    gap: '0.5rem',
+    gap: '0.45rem',
     background: '#ffffff',
-    border: '1.5px solid var(--primary-border)',
+    border: '1px solid var(--primary-border)',
     borderRadius: 'var(--radius-full)',
-    padding: '0.4rem 0.85rem',
+    padding: '0.35rem 0.8rem',
     cursor: 'pointer',
     transition: 'all 0.15s ease',
     boxShadow: 'var(--shadow-sm)',
   },
   suggestedDot: {
-    width: 8,
-    height: 8,
+    width: 7,
+    height: 7,
     borderRadius: '50%',
     background: 'var(--success)',
+    display: 'inline-block',
   },
   suggestedName: {
-    fontSize: '0.85rem',
+    fontSize: '0.825rem',
     color: 'var(--slate-900)',
+    fontWeight: 600,
   },
   suggestedBadge: {
-    fontSize: '0.75rem',
+    fontSize: '0.725rem',
     fontWeight: 700,
     fontFamily: 'var(--font-mono)',
     background: 'var(--primary-light)',
     color: 'var(--primary-dark)',
-    padding: '0.15rem 0.5rem',
+    padding: '0.1rem 0.45rem',
     borderRadius: 'var(--radius-full)',
-  },
-  filterGroup: {
-    display: 'flex',
-    gap: '0.5rem',
-  },
-  filterBtn: {
-    padding: '0.65rem 1rem',
-    borderRadius: 'var(--radius-md)',
-    border: '1px solid',
-    fontSize: '0.85rem',
-    cursor: 'pointer',
-    transition: 'all 0.15s ease',
-    whiteSpace: 'nowrap',
   },
   controlsBar: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
     gap: '1rem',
-    marginBottom: '1.75rem',
+    marginBottom: '1.5rem',
     flexWrap: 'wrap',
   },
   searchWrapper: {
     position: 'relative',
-    flex: '1 1 100%',
-    maxWidth: 600,
+    flex: '1 1 320px',
+    maxWidth: 500,
     display: 'flex',
     alignItems: 'center',
   },
-  searchIcon: {
+  searchSvg: {
     position: 'absolute',
-    left: '0.9rem',
+    left: '0.85rem',
     color: 'var(--slate-400)',
-    fontSize: '0.95rem',
     pointerEvents: 'none',
   },
   searchInput: {
     width: '100%',
-    padding: '0.75rem 2.2rem 0.75rem 2.4rem',
+    padding: '0.65rem 2rem 0.65rem 2.4rem',
     borderRadius: 'var(--radius-md)',
     border: '1px solid var(--slate-300)',
     background: '#ffffff',
@@ -483,49 +424,59 @@ const styles: Record<string, React.CSSProperties> = {
     border: 'none',
     color: 'var(--slate-400)',
     cursor: 'pointer',
-    fontSize: '0.85rem',
+    fontSize: '0.8rem',
   },
-  createBtn: {
-    padding: '0.75rem 1.25rem',
-    fontSize: '0.875rem',
-    fontWeight: 700,
+  filterGroup: {
+    display: 'flex',
+    gap: '0.5rem',
+  },
+  filterBtn: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    padding: '0.6rem 0.9rem',
+    borderRadius: 'var(--radius-md)',
+    border: '1px solid',
+    fontSize: '0.825rem',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
     whiteSpace: 'nowrap',
   },
   errorAlert: {
     background: 'var(--danger-light)',
     border: '1px solid var(--danger-border)',
     color: 'var(--danger-dark)',
-    padding: '1rem 1.25rem',
+    padding: '0.85rem 1.25rem',
     borderRadius: 'var(--radius-md)',
-    marginBottom: '1.5rem',
+    marginBottom: '1.25rem',
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
     fontWeight: 600,
+    fontSize: '0.875rem',
   },
   emptyState: {
     textAlign: 'center',
-    padding: '4rem 2rem',
+    padding: '3.5rem 1.5rem',
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
   },
   spinner: {
-    width: 38,
-    height: 38,
-    border: '3.5px solid var(--slate-200)',
+    width: 34,
+    height: 34,
+    border: '3px solid var(--slate-200)',
     borderTopColor: 'var(--primary)',
     borderRadius: '50%',
     animation: 'spin 0.8s linear infinite',
   },
   modulesGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))',
-    gap: '1.5rem',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))',
+    gap: '1.25rem',
   },
   moduleCard: {
-    padding: '1.5rem',
+    padding: '1.25rem',
     display: 'flex',
     flexDirection: 'column',
     justifyContent: 'space-between',
@@ -536,23 +487,10 @@ const styles: Record<string, React.CSSProperties> = {
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     gap: '0.75rem',
-    marginBottom: '1.25rem',
-  },
-  moduleTitleGroup: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.85rem',
-  },
-  shiftIconBox: {
-    fontSize: '1.5rem',
-    background: 'var(--slate-50)',
-    border: '1px solid var(--slate-200)',
-    padding: '0.45rem',
-    borderRadius: 'var(--radius-md)',
-    lineHeight: 1,
+    marginBottom: '1rem',
   },
   moduleClassName: {
-    fontSize: '1.15rem',
+    fontSize: '1.1rem',
     fontWeight: 800,
     color: 'var(--slate-900)',
     margin: 0,
@@ -566,20 +504,29 @@ const styles: Record<string, React.CSSProperties> = {
   statusBadge: {
     fontSize: '0.725rem',
     fontWeight: 700,
-    padding: '0.2rem 0.6rem',
+    padding: '0.2rem 0.55rem',
     borderRadius: 'var(--radius-full)',
     border: '1px solid transparent',
     whiteSpace: 'nowrap',
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '0.35rem',
+  },
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: '50%',
+    display: 'inline-block',
   },
   seatPillRow: {
     display: 'grid',
     gridTemplateColumns: 'repeat(4, 1fr)',
-    gap: '0.5rem',
+    gap: '0.4rem',
     background: 'var(--slate-50)',
     border: '1px solid var(--slate-200)',
     borderRadius: 'var(--radius-md)',
-    padding: '0.75rem',
-    marginBottom: '1.25rem',
+    padding: '0.65rem',
+    marginBottom: '1rem',
   },
   seatPill: {
     display: 'flex',
@@ -593,21 +540,21 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 700,
   },
   seatPillVal: {
-    fontSize: '1.1rem',
+    fontSize: '1.05rem',
     fontWeight: 800,
     fontFamily: 'var(--font-mono)',
     color: 'var(--slate-800)',
   },
   progressContainer: {
-    marginBottom: '1.25rem',
+    marginBottom: '1rem',
   },
   progressBar: {
-    height: 7,
+    height: 6,
     borderRadius: 'var(--radius-full)',
     background: 'var(--slate-200)',
     display: 'flex',
     overflow: 'hidden',
-    marginBottom: '0.4rem',
+    marginBottom: '0.35rem',
   },
   progressLabelRow: {
     display: 'flex',
@@ -618,11 +565,11 @@ const styles: Record<string, React.CSSProperties> = {
   },
   moduleFooter: {
     borderTop: '1px solid var(--slate-100)',
-    paddingTop: '1rem',
+    paddingTop: '0.85rem',
   },
   viewSeatsBtn: {
     width: '100%',
-    padding: '0.75rem 1rem',
-    fontSize: '0.925rem',
+    padding: '0.7rem 1rem',
+    fontSize: '0.875rem',
   },
 };

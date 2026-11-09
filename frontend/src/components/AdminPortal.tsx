@@ -118,7 +118,7 @@ export function AdminPortal({ onViewClassSeatMap, onLogout }: AdminPortalProps) 
       <div style={styles.topHeader}>
         <div>
           <div style={styles.adminBadgeRow}>
-            <span style={styles.adminBadge}>🛡️ Administrative Control Center</span>
+            <span style={styles.adminBadge}>Administrative Control Center</span>
             <span style={styles.liveIndicator}>
               <span style={{ ...styles.liveDot, opacity: isRefreshing ? 0.3 : 1 }} />
               Live Sync Active
@@ -131,7 +131,7 @@ export function AdminPortal({ onViewClassSeatMap, onLogout }: AdminPortalProps) 
         </div>
 
         <button onClick={onLogout} className="btn btn-outline" style={styles.logoutBtn} type="button">
-          🚪 Exit Admin Mode
+          Exit Admin Mode
         </button>
       </div>
 
@@ -169,7 +169,7 @@ export function AdminPortal({ onViewClassSeatMap, onLogout }: AdminPortalProps) 
         {/* Left Column: Create Class & Shift Form */}
         <div className="card" style={styles.cardSection}>
           <div style={styles.cardHeader}>
-            <span style={{ fontSize: '1.3rem' }}>➕</span>
+            
             <div>
               <h2 style={styles.cardTitle}>Create Class & Shift</h2>
               <p style={styles.cardSub}>Select the class level and shift from dropdowns to configure admission seats</p>
@@ -289,7 +289,7 @@ export function AdminPortal({ onViewClassSeatMap, onLogout }: AdminPortalProps) 
               className="btn btn-primary"
               style={styles.submitBtn}
             >
-              {submitting ? 'Creating Class...' : '🚀 Create Class & Open Admission'}
+              {submitting ? 'Creating Class...' : 'Create Class & Open Admission'}
             </button>
           </form>
         </div>
@@ -297,7 +297,7 @@ export function AdminPortal({ onViewClassSeatMap, onLogout }: AdminPortalProps) 
         {/* Right Column: Live Shift Roster */}
         <div className="card" style={styles.cardSection}>
           <div style={styles.cardHeader}>
-            <span style={{ fontSize: '1.3rem' }}>📊</span>
+            
             <div>
               <h2 style={styles.cardTitle}>Live Class & Shift Roster</h2>
               <p style={styles.cardSub}>Real-time seat distribution and student occupancy status</p>
@@ -322,9 +322,9 @@ export function AdminPortal({ onViewClassSeatMap, onLogout }: AdminPortalProps) 
                       <div>
                         <strong style={styles.className}>{cls.name}</strong>
                         <div style={styles.seatPillsRow}>
-                          <span style={styles.availPill}>🟢 {cls.availableSeats} Available</span>
-                          <span style={styles.heldPill}>🟡 {cls.heldSeats} Held</span>
-                          <span style={styles.confPill}>🔵 {cls.confirmedSeats} Confirmed</span>
+                          <span style={styles.availPill}>{cls.availableSeats} Available</span>
+                          <span style={styles.heldPill}>{cls.heldSeats} Held</span>
+                          <span style={styles.confPill}>{cls.confirmedSeats} Confirmed</span>
                           <span style={styles.totalPill}>Total: {cls.totalSeats}</span>
                         </div>
                       </div>
@@ -336,7 +336,7 @@ export function AdminPortal({ onViewClassSeatMap, onLogout }: AdminPortalProps) 
                           className="btn btn-outline"
                           style={styles.viewSeatMapBtn}
                         >
-                          🪑 Seat Map →
+                          Seat Map →
                         </button>
                       )}
                     </div>
@@ -358,7 +358,7 @@ export function AdminPortal({ onViewClassSeatMap, onLogout }: AdminPortalProps) 
                     </div>
                     <div style={styles.occupancyText}>
                       <span>{occupancy}% Occupied</span>
-                      <span>{cls.availableSeats === 0 ? '🔴 FULL' : '🟢 OPEN'}</span>
+                      <span>{cls.availableSeats === 0 ? 'FULL' : 'OPEN'}</span>
                     </div>
                   </div>
                 );

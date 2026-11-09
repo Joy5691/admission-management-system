@@ -1,9 +1,11 @@
 ﻿import { useEffect, useState, useCallback, useMemo } from 'react';
 import { apiFetch, friendlyError } from '../api/client';
 import { MyHold } from '../types';
+import { Language, translations } from '../i18n';
 
 interface Props {
   studentId: string;
+  lang?: Language;
   onViewHold: (holdId: string) => void;
   onGoToClasses?: () => void;
   onUpdateStudentId?: (id: string) => void;
@@ -11,7 +13,8 @@ interface Props {
 
 type Filter = 'ALL' | 'HELD' | 'CONFIRMED' | 'TERMINAL';
 
-export function MyApplications({ studentId, onViewHold, onGoToClasses, onUpdateStudentId }: Props) {
+export function MyApplications({ studentId, lang = 'en', onViewHold, onGoToClasses, onUpdateStudentId }: Props) {
+  const t = translations[lang] || translations.en;
   const [searchIdInput, setSearchIdInput] = useState('');
   const [holds, setHolds] = useState<MyHold[]>([]);
   const [loading, setLoading] = useState(true);
@@ -54,7 +57,7 @@ export function MyApplications({ studentId, onViewHold, onGoToClasses, onUpdateS
     return (
       <div style={styles.container} className="animate-fade-in">
         <div style={styles.warnCard} className="card">
-          <span style={styles.warnIcon}>🎓</span>
+          
           <h3 style={styles.warnTitle}>Find Your Applications</h3>
           <p style={styles.warnText}>
             Enter your 17-digit Birth Registration Number to view your held seats, payment status, and confirmed admissions.
@@ -93,7 +96,7 @@ export function MyApplications({ studentId, onViewHold, onGoToClasses, onUpdateS
               className="btn btn-primary"
               style={{ padding: '0.75rem 1.25rem' }}
             >
-              Search Applications →
+              ${t.searchApplicationsBtn || 'Search Applications →'}
             </button>
           </form>
           <span style={{ fontSize: '0.75rem', color: 'var(--slate-400)', marginTop: '0.5rem', display: 'block', fontFamily: 'var(--font-mono)' }}>
@@ -144,7 +147,7 @@ export function MyApplications({ studentId, onViewHold, onGoToClasses, onUpdateS
                   textDecoration: 'underline',
                 }}
               >
-                Switch Student ID
+                ${t.switchStudentId || 'Switch Student ID'}
               </button>
             )}
           </p>
@@ -169,7 +172,7 @@ export function MyApplications({ studentId, onViewHold, onGoToClasses, onUpdateS
 
       {error && (
         <div style={styles.errorBox}>
-          <span>⚠️</span>
+          
           <span>{error}</span>
         </div>
       )}
@@ -204,7 +207,7 @@ export function MyApplications({ studentId, onViewHold, onGoToClasses, onUpdateS
       {/* Empty State */}
       {holds.length === 0 && (
         <div style={styles.emptyState} className="card">
-          <div style={styles.emptyIcon}>📝</div>
+          
           <h3 style={styles.emptyTitle}>No Applications on Record</h3>
           <p style={styles.emptyText}>
             You have not applied for any class seats yet. Explore available shifts and apply online.
@@ -275,7 +278,7 @@ export function MyApplications({ studentId, onViewHold, onGoToClasses, onUpdateS
                     className={`btn ${isHeld ? 'btn-primary' : 'btn-outline'}`}
                     style={styles.actionBtn}
                   >
-                    {isHeld ? '💳 Pay Admission Fee →' : 'View Details →'}
+                    {isHeld ? 'Pay Admission Fee →' : 'View Details →'}
                   </button>
                 </div>
               </div>

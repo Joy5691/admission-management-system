@@ -3,9 +3,12 @@ import { apiFetch, friendlyError } from '../api/client';
 import { Hold } from '../types';
 import { CountdownTimer } from './CountdownTimer';
 
+import { Language } from '../i18n';
+
 interface Props {
   holdId: string;
   studentId: string;
+  lang?: Language;
   onBack: () => void;
 }
 
@@ -20,7 +23,7 @@ const STATUS_CONFIG: Record<
     bg: 'var(--warning-light)',
     color: 'var(--warning-dark)',
     border: 'var(--warning-border)',
-    icon: '⏳',
+    icon: '',
     bannerText: 'Seat is temporarily reserved in your name. Complete payment before the countdown expires to confirm your admission.',
   },
   CONFIRMED: {
@@ -28,7 +31,7 @@ const STATUS_CONFIG: Record<
     bg: 'var(--success-light)',
     color: 'var(--success-dark)',
     border: 'var(--success-border)',
-    icon: '🎉',
+    icon: '',
     bannerText: 'Payment successful! Your admission seat has been permanently locked and confirmed.',
   },
   EXPIRED: {
@@ -36,7 +39,7 @@ const STATUS_CONFIG: Record<
     bg: 'var(--danger-light)',
     color: 'var(--danger-dark)',
     border: 'var(--danger-border)',
-    icon: '⚠️',
+    icon: '',
     bannerText: 'The hold duration has elapsed. This seat has been automatically released back to the general pool.',
   },
   CANCELLED: {
@@ -44,12 +47,13 @@ const STATUS_CONFIG: Record<
     bg: 'var(--slate-100)',
     color: 'var(--slate-600)',
     border: 'var(--slate-300)',
-    icon: '✕',
+    icon: '',
     bannerText: 'This application was cancelled by the student. The seat has been returned to the available seats pool.',
   },
 };
 
-export function ApplicationDetail({ holdId, studentId, onBack }: Props) {
+export function ApplicationDetail({ holdId, studentId, lang = 'en', onBack }: Props) {
+  // const t = translations[lang] || translations.en;
   const [hold, setHold] = useState<Hold | null>(null);
   const [className, setClassName] = useState('');
   const [loading, setLoading] = useState(true);
@@ -147,7 +151,7 @@ export function ApplicationDetail({ holdId, studentId, onBack }: Props) {
     <div style={styles.container} className="animate-fade-in">
       {/* Top Breadcrumb Nav */}
       <button onClick={onBack} style={styles.backBtn} type="button">
-        ← Back to Classes
+        {lang === 'bn' ? '← ফিরে যান' : '← Back'}
       </button>
 
       {/* Main Container Card */}
@@ -239,7 +243,7 @@ export function ApplicationDetail({ holdId, studentId, onBack }: Props) {
                 disabled={isTerminal || actionLoading}
                 onClick={handlePay}
               >
-                {actionLoading ? 'Processing Payment…' : '💳 Pay Admission Fee'}
+                {actionLoading ? 'Processing Payment…' : 'Pay Admission Fee'}
               </button>
 
               <button
@@ -252,7 +256,7 @@ export function ApplicationDetail({ holdId, studentId, onBack }: Props) {
                 disabled={isTerminal || actionLoading}
                 onClick={handleCancel}
               >
-                ✕ Cancel Reservation
+                Cancel Reservation
               </button>
             </div>
           </div>

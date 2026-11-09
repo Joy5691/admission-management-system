@@ -37,7 +37,7 @@ export function AdminLoginModal({ isOpen, onClose, onLoginSuccess }: AdminLoginM
       <div className="modal-dialog animate-slide-up" onClick={(e) => e.stopPropagation()}>
         {/* Modal Header */}
         <div style={styles.header}>
-          <div style={styles.headerIcon}>🔐</div>
+          
           <div>
             <h3 style={styles.title}>Admin Portal Login</h3>
             <p style={styles.subtitle}>Sign in to manage classes, shifts, and view live admission analytics</p>
@@ -52,7 +52,7 @@ export function AdminLoginModal({ isOpen, onClose, onLoginSuccess }: AdminLoginM
           {/* Demo Credential Pill */}
           <div style={styles.demoCard}>
             <div style={styles.demoCardHeader}>
-              <span style={styles.demoBadge}>⚡ Demo Access</span>
+              <span style={styles.demoBadge}>Demo Access</span>
               <button
                 type="button"
                 onClick={handleDemoLogin}
