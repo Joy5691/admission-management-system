@@ -1,0 +1,3 @@
+# Phase 3 marker — hold seats with row-level locking
+# POST /classes/{classId}/holds implemented in Endpoints/HoldsEndpoints.cs
+# GET  /holds/{holdId}        implemented in Endpoints/HoldsEndpoints.cs
