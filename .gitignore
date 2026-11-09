@@ -23,3 +23,7 @@ Thumbs.db
 
 # EF Core migrations bundle
 efbundle
+
+# Assignment files & PDFs (confidential per instructions)
+files/
+*.pdf
