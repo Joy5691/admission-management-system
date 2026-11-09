@@ -1,19 +1,26 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { StudentIdBar } from './components/StudentIdBar';
 import { ClassList } from './components/ClassList';
 import { ApplicationDetail } from './components/ApplicationDetail';
 import { MyApplications } from './components/MyApplications';
-import { CreateClass } from './components/CreateClass';
+import { AdminPortal } from './components/AdminPortal';
+import { AdminLoginModal } from './components/AdminLoginModal';
 import { ErrorBoundary } from './ErrorBoundary';
 
 type Tab = 'classes' | 'my-applications' | 'admin';
 
 const STUDENT_ID_KEY = 'studentId';
+const IS_ADMIN_KEY = 'isAdmin';
 
 function App() {
   const [studentId, setStudentId] = useState(() => localStorage.getItem(STUDENT_ID_KEY) || '');
   const [activeTab, setActiveTab] = useState<Tab>('classes');
   const [viewingHoldId, setViewingHoldId] = useState<string | null>(null);
+  const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
+
+  // Admin state
+  const [isAdmin, setIsAdmin] = useState(() => localStorage.getItem(IS_ADMIN_KEY) === 'true');
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem(STUDENT_ID_KEY);
@@ -30,7 +37,25 @@ function App() {
 
   const handleBack = () => {
     setViewingHoldId(null);
+    setSelectedClassId(null);
     setActiveTab('classes');
+  };
+
+  const handleLoginSuccess = () => {
+    setIsAdmin(true);
+    setActiveTab('admin');
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem(IS_ADMIN_KEY);
+    setIsAdmin(false);
+    if (activeTab === 'admin') setActiveTab('classes');
+  };
+
+  const handleViewClassSeatMap = (classId: string) => {
+    setSelectedClassId(classId);
+    setActiveTab('classes');
+    setViewingHoldId(null);
   };
 
   return (
@@ -38,21 +63,68 @@ function App() {
       {/* Top Header */}
       <header style={styles.header}>
         <div style={styles.headerInner}>
+          {/* Brand with Onnorokom Logo */}
           <div style={styles.brand} onClick={handleBack}>
-            <div style={styles.logoBadge}>🎓</div>
+            <div style={styles.logoBadge}>
+              <img
+                src="/logo.jpg"
+                alt="Onnorokom Academy Logo"
+                style={styles.logoImg}
+              />
+            </div>
             <div>
-              <div style={styles.brandName}>APEX ACADEMY</div>
-              <div style={styles.brandTag}>Online Admission Portal • First-Come, First-Served</div>
+              <div style={styles.brandName}>ONNOROKOM ACADEMY</div>
+              <div style={styles.brandTag}>অনন্যরকম একাডেমি • Online Admission Portal</div>
             </div>
           </div>
 
+          {/* Student ID Center Box */}
           <div style={styles.studentIdSection}>
             <StudentIdBar studentId={studentId} onStudentIdChange={setStudentId} />
+          </div>
+
+          {/* Upper Right Corner: Admin Login / Profile */}
+          <div style={styles.adminSection}>
+            {isAdmin ? (
+              <div style={styles.adminLoggedInRow}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setViewingHoldId(null);
+                    setSelectedClassId(null);
+                    setActiveTab('admin');
+                  }}
+                  style={{
+                    ...styles.adminModeBtn,
+                    background: activeTab === 'admin' ? 'var(--primary-dark)' : 'var(--primary)',
+                  }}
+                >
+                  🛡️ Admin Portal
+                </button>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  style={styles.logoutPill}
+                  title="Sign out of admin mode"
+                >
+                  🚪 Logout
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setIsLoginModalOpen(true)}
+                className="btn btn-outline"
+                style={styles.adminLoginBtn}
+              >
+                🔐 Admin Login
+              </button>
+            )}
           </div>
         </div>
       </header>
 
-      {/* Main Navigation Tabs (when not in detail view) */}
+      {/* Main Navigation Tabs (when not in application detail view) */}
       {!viewingHoldId && (
         <nav style={styles.navBar}>
           <div style={styles.navInner}>
@@ -60,7 +132,10 @@ function App() {
               icon="🏫"
               label="Academic Classes"
               active={activeTab === 'classes'}
-              onClick={() => setActiveTab('classes')}
+              onClick={() => {
+                setSelectedClassId(null);
+                setActiveTab('classes');
+              }}
             />
             <TabButton
               icon="📋"
@@ -68,12 +143,14 @@ function App() {
               active={activeTab === 'my-applications'}
               onClick={() => setActiveTab('my-applications')}
             />
-            <TabButton
-              icon="⚙️"
-              label="Admin: Create Class"
-              active={activeTab === 'admin'}
-              onClick={() => setActiveTab('admin')}
-            />
+            {isAdmin && (
+              <TabButton
+                icon="⚙️"
+                label="Admin Portal & Shifts"
+                active={activeTab === 'admin'}
+                onClick={() => setActiveTab('admin')}
+              />
+            )}
           </div>
         </nav>
       )}
@@ -93,9 +170,20 @@ function App() {
                 <ClassList
                   studentId={studentId}
                   onApplied={handleApplied}
-                  onGoToCreate={() => setActiveTab('admin')}
+                  onViewHold={handleViewHold}
+                  onGoToCreate={() => {
+                    if (isAdmin) {
+                      setActiveTab('admin');
+                    } else {
+                      setIsLoginModalOpen(true);
+                    }
+                  }}
+                  onUpdateStudentId={setStudentId}
+                  selectedClassId={selectedClassId}
+                  onSelectClass={setSelectedClassId}
                 />
               )}
+
               {activeTab === 'my-applications' && (
                 <MyApplications
                   studentId={studentId}
@@ -103,19 +191,30 @@ function App() {
                   onGoToClasses={() => setActiveTab('classes')}
                 />
               )}
+
               {activeTab === 'admin' && (
-                <CreateClass onClassCreated={() => setActiveTab('classes')} />
+                <AdminPortal
+                  onViewClassSeatMap={handleViewClassSeatMap}
+                  onLogout={handleLogout}
+                />
               )}
             </>
           )}
         </ErrorBoundary>
       </main>
 
+      {/* Admin Login Modal */}
+      <AdminLoginModal
+        isOpen={isLoginModalOpen}
+        onClose={() => setIsLoginModalOpen(false)}
+        onLoginSuccess={handleLoginSuccess}
+      />
+
       {/* Global Footer */}
       <footer style={styles.footer}>
         <div style={styles.footerInner}>
           <div style={styles.footerBrand}>
-            <strong>Apex Academy Online Admission System</strong>
+            <strong>Onnorokom Academy Online Admission System</strong>
             <span> • First-Come, First-Served Concurrency Engine</span>
           </div>
           <div style={styles.techBadges}>
@@ -149,7 +248,7 @@ function TabButton({
         color: active ? 'var(--primary)' : 'var(--slate-600)',
         borderBottom: active ? '2.5px solid var(--primary)' : '2.5px solid transparent',
         fontWeight: active ? 700 : 500,
-        background: active ? 'rgba(79, 70, 229, 0.04)' : 'transparent',
+        background: active ? 'rgba(30, 107, 184, 0.06)' : 'transparent',
       }}
       type="button"
     >
@@ -167,21 +266,21 @@ const styles: Record<string, React.CSSProperties> = {
     background: 'var(--slate-50)',
   },
   header: {
-    background: 'var(--slate-900)',
-    borderBottom: '1px solid var(--slate-800)',
+    background: '#ffffff',
+    borderBottom: '1px solid var(--slate-200)',
     position: 'sticky',
     top: 0,
     zIndex: 100,
-    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)',
   },
   headerInner: {
     maxWidth: 1240,
     margin: '0 auto',
-    padding: '0.85rem 1.5rem',
+    padding: '0.75rem 1.5rem',
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    gap: '1.5rem',
+    gap: '1.25rem',
     flexWrap: 'wrap',
   },
   brand: {
@@ -192,36 +291,81 @@ const styles: Record<string, React.CSSProperties> = {
     userSelect: 'none',
   },
   logoBadge: {
-    width: 42,
-    height: 42,
-    background: 'linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)',
+    width: 44,
+    height: 44,
     borderRadius: 'var(--radius-md)',
+    overflow: 'hidden',
+    boxShadow: 'var(--shadow-sm)',
+    border: '1px solid var(--slate-200)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    fontSize: '1.4rem',
-    boxShadow: '0 4px 10px rgba(79, 70, 229, 0.4)',
+    background: '#ffffff',
+  },
+  logoImg: {
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
   },
   brandName: {
-    fontSize: '1.15rem',
+    fontSize: '1.2rem',
     fontWeight: 800,
-    color: '#fff',
+    color: 'var(--primary)',
     letterSpacing: '-0.02em',
     lineHeight: 1.2,
   },
   brandTag: {
     fontSize: '0.725rem',
-    color: 'var(--slate-400)',
-    fontWeight: 500,
+    color: 'var(--slate-500)',
+    fontWeight: 600,
   },
   studentIdSection: {
     display: 'flex',
     alignItems: 'center',
   },
+  adminSection: {
+    display: 'flex',
+    alignItems: 'center',
+  },
+  adminLoggedInRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.5rem',
+  },
+  adminModeBtn: {
+    color: '#ffffff',
+    border: 'none',
+    padding: '0.5rem 0.9rem',
+    borderRadius: 'var(--radius-md)',
+    fontSize: '0.85rem',
+    fontWeight: 700,
+    cursor: 'pointer',
+    boxShadow: '0 2px 6px rgba(30, 107, 184, 0.3)',
+    transition: 'all 0.15s ease',
+  },
+  logoutPill: {
+    background: 'var(--slate-100)',
+    border: '1px solid var(--slate-200)',
+    color: 'var(--slate-600)',
+    padding: '0.5rem 0.75rem',
+    borderRadius: 'var(--radius-md)',
+    fontSize: '0.8rem',
+    fontWeight: 600,
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+  },
+  adminLoginBtn: {
+    padding: '0.5rem 1rem',
+    fontSize: '0.875rem',
+    fontWeight: 700,
+    borderColor: 'var(--primary-border)',
+    color: 'var(--primary)',
+    background: 'var(--primary-light)',
+  },
   navBar: {
-    background: '#fff',
+    background: '#ffffff',
     borderBottom: '1px solid var(--slate-200)',
-    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.03)',
+    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.02)',
   },
   navInner: {
     maxWidth: 1240,
@@ -234,7 +378,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'inline-flex',
     alignItems: 'center',
     gap: '0.5rem',
-    padding: '0.9rem 1.25rem',
+    padding: '0.85rem 1.25rem',
     border: 'none',
     cursor: 'pointer',
     fontSize: '0.925rem',
@@ -247,7 +391,7 @@ const styles: Record<string, React.CSSProperties> = {
     minHeight: 'calc(100vh - 180px)',
   },
   footer: {
-    background: '#fff',
+    background: '#ffffff',
     borderTop: '1px solid var(--slate-200)',
     padding: '1.5rem',
     marginTop: 'auto',

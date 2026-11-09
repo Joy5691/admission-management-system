@@ -1,62 +1,64 @@
-﻿import { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { apiFetch, friendlyError } from '../api/client';
 import { ClassInfo } from '../types';
+import { ClassSeatMap } from './ClassSeatMap';
 
-interface Props {
+interface ClassListProps {
   studentId: string;
   onApplied: (holdId: string) => void;
-  onGoToCreate?: () => void;
+  onViewHold?: (holdId: string) => void;
+  onGoToCreate: () => void;
+  onUpdateStudentId?: (id: string) => void;
+  selectedClassId?: string | null;
+  onSelectClass?: (id: string | null) => void;
 }
 
-export function ClassList({ studentId, onApplied, onGoToCreate }: Props) {
+export function ClassList({
+  studentId,
+  onApplied,
+  onViewHold = () => {},
+  onGoToCreate,
+  onUpdateStudentId = () => {},
+  selectedClassId: externalSelectedClassId,
+  onSelectClass: externalOnSelectClass,
+}: ClassListProps) {
+  const [internalSelectedClassId, setInternalSelectedClassId] = useState<string | null>(null);
+
+  const selectedClassId = externalSelectedClassId !== undefined ? externalSelectedClassId : internalSelectedClassId;
+  const setSelectedClassId = (id: string | null) => {
+    if (externalOnSelectClass) externalOnSelectClass(id);
+    else setInternalSelectedClassId(id);
+  };
+
   const [classes, setClasses] = useState<ClassInfo[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [applying, setApplying] = useState<string | null>(null);
-  const [applyError, setApplyError] = useState<Record<string, string>>({});
-  const [search, setSearch] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
 
-  const fetchClasses = useCallback(async (isInitial = false) => {
-    if (!isInitial) setIsRefreshing(true);
+  // Fetch classes
+  const loadClasses = async (isInitial = false) => {
+    if (isInitial) setLoading(true);
+    else setIsRefreshing(true);
     try {
-      const data = await apiFetch('/classes');
-      setClasses(data || []);
-      setError('');
-    } catch (err) {
-      setError(friendlyError(err));
+      const data: ClassInfo[] = await apiFetch('/classes');
+      setClasses(data);
+      setError(null);
+    } catch (err: any) {
+      if (isInitial) setError(friendlyError(err));
     } finally {
       if (isInitial) setLoading(false);
-      setTimeout(() => setIsRefreshing(false), 300);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchClasses(true);
-    const id = setInterval(() => fetchClasses(false), 4000);
-    return () => clearInterval(id);
-  }, [fetchClasses]);
-
-  const handleApply = async (cls: ClassInfo) => {
-    if (!studentId) return;
-    setApplying(cls.id);
-    setApplyError(prev => ({ ...prev, [cls.id]: '' }));
-    try {
-      const hold = await apiFetch(`/classes/${cls.id}/holds`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Student-Id': studentId,
-        },
-      });
-      onApplied(hold.holdId);
-    } catch (err) {
-      setApplyError(prev => ({ ...prev, [cls.id]: friendlyError(err) }));
-    } finally {
-      setApplying(null);
+      else setIsRefreshing(false);
     }
   };
 
+  useEffect(() => {
+    loadClasses(true);
+    const interval = setInterval(() => loadClasses(false), 4000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Filtered classes
   const filtered = useMemo(() => {
     if (!search.trim()) return classes;
     const term = search.toLowerCase();
@@ -66,9 +68,25 @@ export function ClassList({ studentId, onApplied, onGoToCreate }: Props) {
   const totalSeatsAll = classes.reduce((sum, c) => sum + c.totalSeats, 0);
   const totalAvailableAll = classes.reduce((sum, c) => sum + c.availableSeats, 0);
   const totalConfirmedAll = classes.reduce((sum, c) => sum + c.confirmedSeats, 0);
+  const totalHeldAll = classes.reduce((sum, c) => sum + c.heldSeats, 0);
+
+  // If a class is selected, show its interactive seat map
+  const activeClass = classes.find(c => c.id === selectedClassId);
+  if (selectedClassId && activeClass) {
+    return (
+      <ClassSeatMap
+        classInfo={activeClass}
+        studentId={studentId}
+        onBack={() => setSelectedClassId(null)}
+        onApplied={onApplied}
+        onViewHold={onViewHold}
+        onUpdateStudentId={onUpdateStudentId}
+      />
+    );
+  }
 
   return (
-    <div style={styles.container}>
+    <div style={styles.container} className="animate-fade-in">
       {/* Top Banner & Stats */}
       <div style={styles.headerBanner}>
         <div>
@@ -77,11 +95,11 @@ export function ClassList({ studentId, onApplied, onGoToCreate }: Props) {
               <span style={{ ...styles.liveDot, opacity: isRefreshing ? 0.3 : 1 }} />
               Live Sync (4s)
             </span>
-            <span style={styles.protocolBadge}>⚡ First-Come, First-Served</span>
+            <span style={styles.protocolBadge}>⚡ Real-Time First-Come, First-Served</span>
           </div>
-          <h1 style={styles.title}>Academic Shifts & Available Seats</h1>
+          <h1 style={styles.title}>Academic Classes & Shift Modules</h1>
           <p style={styles.subtitle}>
-            Seat holds lock instantly upon application. Pay the fake admission fee within the countdown to secure admission.
+            Explore open admission classes. Click any module to view live classroom seat visualization, hold an available seat, or resume a pending payment.
           </p>
         </div>
 
@@ -95,12 +113,16 @@ export function ClassList({ studentId, onApplied, onGoToCreate }: Props) {
             <span style={styles.statLabel}>Total Capacity</span>
             <span style={styles.statVal}>{totalSeatsAll}</span>
           </div>
-          <div style={styles.statPill}>
-            <span style={styles.statLabel}>Available Seats</span>
+          <div style={{ ...styles.statPill, background: 'var(--seat-avail-bg)', borderColor: 'var(--seat-avail-border)' }}>
+            <span style={{ ...styles.statLabel, color: 'var(--primary)' }}>Available Seats</span>
             <span style={{ ...styles.statVal, color: 'var(--primary)' }}>{totalAvailableAll}</span>
           </div>
-          <div style={styles.statPill}>
-            <span style={styles.statLabel}>Confirmed</span>
+          <div style={{ ...styles.statPill, background: 'var(--seat-held-bg)', borderColor: 'var(--seat-held-border)' }}>
+            <span style={{ ...styles.statLabel, color: 'var(--warning-dark)' }}>Held</span>
+            <span style={{ ...styles.statVal, color: 'var(--warning-dark)' }}>{totalHeldAll}</span>
+          </div>
+          <div style={{ ...styles.statPill, background: 'var(--seat-conf-bg)', borderColor: 'var(--seat-conf-border)' }}>
+            <span style={{ ...styles.statLabel, color: 'var(--success-dark)' }}>Confirmed</span>
             <span style={{ ...styles.statVal, color: 'var(--success-dark)' }}>{totalConfirmedAll}</span>
           </div>
         </div>
@@ -114,220 +136,182 @@ export function ClassList({ studentId, onApplied, onGoToCreate }: Props) {
             type="text"
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Search by class name or shift (e.g. Morning, Class 6)..."
+            placeholder="Search by class or shift (e.g. Morning, Class 6, KG)..."
             style={styles.searchInput}
           />
           {search && (
-            <button onClick={() => setSearch('')} style={styles.clearSearchBtn} type="button">
-              ✕
-            </button>
+            <button onClick={() => setSearch('')} style={styles.clearSearchBtn}>✕</button>
           )}
         </div>
+
+        <button
+          onClick={onGoToCreate}
+          className="btn btn-outline"
+          style={styles.createBtn}
+          type="button"
+        >
+          ➕ Admin: Add Class
+        </button>
       </div>
 
+      {/* Error state */}
       {error && (
-        <div style={styles.errorBox}>
-          <span style={{ fontSize: '1.25rem' }}>⚠️</span>
-          <span>{error}</span>
-        </div>
-      )}
-
-      {/* Loading Skeletons */}
-      {loading && (
-        <div style={styles.cardsGrid}>
-          {[1, 2, 3].map(i => (
-            <div key={i} style={styles.skeletonCard}>
-              <div className="skeleton" style={{ height: 28, width: '60%', marginBottom: 16 }} />
-              <div className="skeleton" style={{ height: 16, width: '100%', marginBottom: 20 }} />
-              <div className="skeleton" style={{ height: 60, width: '100%', marginBottom: 20 }} />
-              <div className="skeleton" style={{ height: 44, width: '100%' }} />
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Empty State */}
-      {!loading && classes.length === 0 && (
-        <div style={styles.emptyState}>
-          <div style={styles.emptyIcon}>📚</div>
-          <h3 style={styles.emptyTitle}>No Classes Provisioned Yet</h3>
-          <p style={styles.emptyText}>
-            The admission catalog is currently empty. Head over to the Administrator tab to create classes and allocate seat capacities.
-          </p>
-          {onGoToCreate && (
-            <button onClick={onGoToCreate} className="btn btn-primary" style={{ marginTop: '1rem' }}>
-              + Create First Class
-            </button>
-          )}
-        </div>
-      )}
-
-      {/* Filtered Empty State */}
-      {!loading && classes.length > 0 && filtered.length === 0 && (
-        <div style={styles.emptyState}>
-          <div style={styles.emptyIcon}>🔎</div>
-          <h3 style={styles.emptyTitle}>No Matching Classes</h3>
-          <p style={styles.emptyText}>No classes matched your search "{search}".</p>
-          <button onClick={() => setSearch('')} className="btn btn-outline" style={{ marginTop: '0.75rem' }}>
-            Clear Search
+        <div style={styles.errorAlert}>
+          <span>⚠️ {error}</span>
+          <button onClick={() => loadClasses(true)} className="btn btn-outline" style={{ padding: '0.25rem 0.75rem', fontSize: '0.8rem' }}>
+            Retry Connection
           </button>
         </div>
       )}
 
-      {/* Class Cards Grid */}
-      <div style={styles.cardsGrid}>
-        {filtered.map(cls => {
-          const isMorning = cls.name.toLowerCase().includes('morning');
-          const isDay = cls.name.toLowerCase().includes('day');
-          const isFull = cls.availableSeats === 0;
+      {/* Loading state */}
+      {loading ? (
+        <div style={styles.emptyState}>
+          <div style={styles.spinner} />
+          <p style={{ marginTop: '1rem', color: 'var(--slate-500)', fontWeight: 600 }}>
+            Syncing real-time class occupancy...
+          </p>
+        </div>
+      ) : filtered.length === 0 ? (
+        <div style={styles.emptyState} className="card">
+          <span style={{ fontSize: '2.5rem' }}>🏫</span>
+          <h3 style={{ fontSize: '1.25rem', fontWeight: 800, marginTop: '0.5rem', color: 'var(--slate-800)' }}>
+            {search ? 'No classes matched your search' : 'No academic classes open yet'}
+          </h3>
+          <p style={{ color: 'var(--slate-500)', fontSize: '0.9rem', maxWidth: 420, margin: '0.4rem 0 1.25rem' }}>
+            {search
+              ? 'Try searching with different keywords like "Morning", "Class 6", or clear the search filter.'
+              : 'Admissions have not been configured yet. Administrators can create the first class module now.'}
+          </p>
+          {search ? (
+            <button onClick={() => setSearch('')} className="btn btn-primary">
+              Clear Search Filter
+            </button>
+          ) : (
+            <button onClick={onGoToCreate} className="btn btn-primary">
+              ➕ Create Academic Class
+            </button>
+          )}
+        </div>
+      ) : (
+        /* Academic Class Modules Grid */
+        <div style={styles.modulesGrid}>
+          {filtered.map(c => {
+            const isFull = c.availableSeats === 0;
+            const occupancyPct = c.totalSeats > 0 ? Math.round(((c.confirmedSeats + c.heldSeats) / c.totalSeats) * 100) : 0;
+            const isMorning = c.name.toLowerCase().includes('morning');
+            const isEvening = c.name.toLowerCase().includes('evening');
+            const shiftIcon = isMorning ? '🌅' : isEvening ? '🌙' : '☀️';
 
-          const pctConfirmed = Math.round((cls.confirmedSeats / cls.totalSeats) * 100);
-          const pctHeld = Math.round((cls.heldSeats / cls.totalSeats) * 100);
-          const pctAvailable = 100 - pctConfirmed - pctHeld;
-
-          return (
-            <div key={cls.id} className="card" style={styles.card}>
-              <div style={styles.cardHeader}>
-                <div>
-                  <span
-                    style={{
-                      ...styles.shiftBadge,
-                      background: isMorning ? 'var(--warning-light)' : isDay ? '#e0f2fe' : 'var(--primary-light)',
-                      color: isMorning ? 'var(--warning-dark)' : isDay ? '#0369a1' : 'var(--primary)',
-                      borderColor: isMorning ? 'var(--warning-border)' : isDay ? '#bae6fd' : 'var(--primary-border)',
-                    }}
-                  >
-                    {isMorning ? '☀️ Morning Shift' : isDay ? '🌤️ Day Shift' : '🏫 Academic Class'}
-                  </span>
-                  <h3 style={styles.className}>{cls.name}</h3>
-                </div>
-
-                <div style={styles.statusPill}>
-                  {isFull ? (
-                    <span style={styles.fullPill}>Full</span>
-                  ) : cls.availableSeats <= 5 ? (
-                    <span style={styles.limitedPill}>Only {cls.availableSeats} Left</span>
-                  ) : (
-                    <span style={styles.openPill}>{cls.availableSeats} Available</span>
-                  )}
-                </div>
-              </div>
-
-              {/* Progress Bar of Capacity */}
-              <div style={styles.progressContainer}>
-                <div style={styles.progressBar}>
-                  <div
-                    style={{
-                      ...styles.progressSegment,
-                      width: `${pctConfirmed}%`,
-                      background: 'var(--success)',
-                    }}
-                    title={`Confirmed: ${cls.confirmedSeats}`}
-                  />
-                  <div
-                    style={{
-                      ...styles.progressSegment,
-                      width: `${pctHeld}%`,
-                      background: 'var(--warning)',
-                    }}
-                    title={`Held: ${cls.heldSeats}`}
-                  />
-                  <div
-                    style={{
-                      ...styles.progressSegment,
-                      width: `${Math.max(0, pctAvailable)}%`,
-                      background: 'var(--slate-200)',
-                    }}
-                    title={`Available: ${cls.availableSeats}`}
-                  />
-                </div>
-                <div style={styles.progressLegend}>
-                  <span style={styles.legendItem}>
-                    <span style={{ ...styles.legendDot, background: 'var(--success)' }} />
-                    Confirmed ({cls.confirmedSeats})
-                  </span>
-                  <span style={styles.legendItem}>
-                    <span style={{ ...styles.legendDot, background: 'var(--warning)' }} />
-                    Held ({cls.heldSeats})
-                  </span>
-                  <span style={styles.legendItem}>
-                    <span style={{ ...styles.legendDot, background: 'var(--slate-300)' }} />
-                    Available ({cls.availableSeats})
-                  </span>
-                </div>
-              </div>
-
-              {/* 4-KPI Metric Box */}
-              <div style={styles.kpiGrid}>
-                <div style={styles.kpiBox}>
-                  <span style={styles.kpiLabel}>Total Capacity</span>
-                  <span style={styles.kpiVal}>{cls.totalSeats}</span>
-                </div>
-                <div style={{ ...styles.kpiBox, background: 'var(--slate-50)' }}>
-                  <span style={styles.kpiLabel}>Available</span>
-                  <span
-                    style={{
-                      ...styles.kpiVal,
-                      color: isFull ? 'var(--danger)' : 'var(--primary)',
-                    }}
-                  >
-                    {cls.availableSeats}
-                  </span>
-                </div>
-                <div style={styles.kpiBox}>
-                  <span style={styles.kpiLabel}>Held</span>
-                  <span style={{ ...styles.kpiVal, color: 'var(--warning-dark)' }}>{cls.heldSeats}</span>
-                </div>
-                <div style={styles.kpiBox}>
-                  <span style={styles.kpiLabel}>Confirmed</span>
-                  <span style={{ ...styles.kpiVal, color: 'var(--success-dark)' }}>{cls.confirmedSeats}</span>
-                </div>
-              </div>
-
-              {/* Apply Error banner */}
-              {applyError[cls.id] && (
-                <div style={styles.cardError}>
-                  <span>⚠️</span>
-                  <span>{applyError[cls.id]}</span>
-                </div>
-              )}
-
-              {/* Action Button */}
-              <button
-                className="btn btn-primary"
-                style={{
-                  ...styles.applyBtn,
-                  background: isFull
-                    ? 'var(--slate-200)'
-                    : !studentId
-                    ? 'var(--slate-300)'
-                    : 'var(--primary-gradient)',
-                  color: isFull || !studentId ? 'var(--slate-600)' : '#fff',
-                }}
-                disabled={!studentId || isFull || applying === cls.id}
-                onClick={() => handleApply(cls)}
+            return (
+              <div
+                key={c.id}
+                className="card card-interactive"
+                style={styles.moduleCard}
+                onClick={() => setSelectedClassId(c.id)}
               >
-                {applying === cls.id
-                  ? 'Reserving Seat…'
-                  : isFull
-                  ? 'Class Full (No Seats)'
-                  : !studentId
-                  ? 'Enter Student ID Above to Apply'
-                  : 'Apply for Seat →'}
-              </button>
-            </div>
-          );
-        })}
-      </div>
+                {/* Module Header */}
+                <div style={styles.moduleHeader}>
+                  <div style={styles.moduleTitleGroup}>
+                    <span style={styles.shiftIconBox}>{shiftIcon}</span>
+                    <div>
+                      <h3 style={styles.moduleClassName}>{c.name}</h3>
+                      <span style={styles.moduleShiftTag}>
+                        {isMorning ? 'Morning Shift' : isEvening ? 'Evening Shift' : 'Day Shift'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <span
+                    style={{
+                      ...styles.statusBadge,
+                      background: isFull ? 'var(--danger-light)' : 'var(--success-light)',
+                      color: isFull ? 'var(--danger-dark)' : 'var(--success-dark)',
+                      borderColor: isFull ? 'var(--danger-border)' : 'var(--success-border)',
+                    }}
+                  >
+                    {isFull ? '🔴 Capacity Full' : '🟢 Open for Admission'}
+                  </span>
+                </div>
+
+                {/* Seat Metrics Row */}
+                <div style={styles.seatPillRow}>
+                  <div style={styles.seatPill}>
+                    <span style={styles.seatPillLabel}>Available</span>
+                    <span style={{ ...styles.seatPillVal, color: 'var(--primary)' }}>
+                      {c.availableSeats}
+                    </span>
+                  </div>
+                  <div style={styles.seatPill}>
+                    <span style={styles.seatPillLabel}>Held</span>
+                    <span style={{ ...styles.seatPillVal, color: 'var(--warning-dark)' }}>
+                      {c.heldSeats}
+                    </span>
+                  </div>
+                  <div style={styles.seatPill}>
+                    <span style={styles.seatPillLabel}>Confirmed</span>
+                    <span style={{ ...styles.seatPillVal, color: 'var(--success-dark)' }}>
+                      {c.confirmedSeats}
+                    </span>
+                  </div>
+                  <div style={styles.seatPill}>
+                    <span style={styles.seatPillLabel}>Total</span>
+                    <span style={styles.seatPillVal}>{c.totalSeats}</span>
+                  </div>
+                </div>
+
+                {/* Progress Bar */}
+                <div style={styles.progressContainer}>
+                  <div style={styles.progressBar}>
+                    <div
+                      style={{
+                        width: `${(c.confirmedSeats / c.totalSeats) * 100}%`,
+                        background: 'var(--success-dark)',
+                      }}
+                      title={`Confirmed: ${c.confirmedSeats}`}
+                    />
+                    <div
+                      style={{
+                        width: `${(c.heldSeats / c.totalSeats) * 100}%`,
+                        background: 'var(--warning)',
+                      }}
+                      title={`Held: ${c.heldSeats}`}
+                    />
+                  </div>
+                  <div style={styles.progressLabelRow}>
+                    <span>{occupancyPct}% Occupied</span>
+                    <span>{c.availableSeats} of {c.totalSeats} seats open</span>
+                  </div>
+                </div>
+
+                {/* Footer Action */}
+                <div style={styles.moduleFooter}>
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    style={styles.viewSeatsBtn}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedClassId(c.id);
+                    }}
+                  >
+                    🪑 View Seat Map & Apply →
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
 
 const styles: Record<string, React.CSSProperties> = {
   container: {
-    padding: '2rem 1.5rem',
     maxWidth: 1240,
     margin: '0 auto',
+    padding: '2rem 1.5rem',
   },
   headerBanner: {
     display: 'flex',
@@ -340,28 +324,28 @@ const styles: Record<string, React.CSSProperties> = {
   badgeRow: {
     display: 'flex',
     alignItems: 'center',
-    gap: '0.65rem',
-    marginBottom: '0.65rem',
+    gap: '0.75rem',
+    marginBottom: '0.5rem',
+    flexWrap: 'wrap',
   },
   liveIndicator: {
     display: 'inline-flex',
     alignItems: 'center',
     gap: '0.4rem',
-    background: 'var(--success-light)',
-    color: 'var(--success-dark)',
-    border: '1px solid var(--success-border)',
+    background: 'var(--slate-100)',
+    border: '1px solid var(--slate-200)',
     padding: '0.2rem 0.65rem',
     borderRadius: 'var(--radius-full)',
     fontSize: '0.75rem',
     fontWeight: 700,
     fontFamily: 'var(--font-mono)',
+    color: 'var(--slate-600)',
   },
   liveDot: {
-    width: 7,
-    height: 7,
+    width: 8,
+    height: 8,
     borderRadius: '50%',
     background: 'var(--success)',
-    boxShadow: '0 0 6px var(--success)',
     transition: 'opacity 0.2s ease',
   },
   protocolBadge: {
@@ -380,12 +364,13 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 800,
     color: 'var(--slate-900)',
     letterSpacing: '-0.025em',
-    marginBottom: '0.4rem',
+    marginBottom: '0.35rem',
   },
   subtitle: {
     color: 'var(--slate-500)',
     fontSize: '0.95rem',
-    maxWidth: 620,
+    maxWidth: 640,
+    lineHeight: 1.5,
   },
   statsGrid: {
     display: 'flex',
@@ -393,253 +378,208 @@ const styles: Record<string, React.CSSProperties> = {
     flexWrap: 'wrap',
   },
   statPill: {
-    background: '#fff',
+    background: '#ffffff',
     border: '1px solid var(--slate-200)',
+    padding: '0.65rem 1rem',
     borderRadius: 'var(--radius-md)',
-    padding: '0.65rem 1.15rem',
-    boxShadow: 'var(--shadow-sm)',
     display: 'flex',
     flexDirection: 'column',
-    alignItems: 'center',
     minWidth: 105,
+    boxShadow: 'var(--shadow-sm)',
   },
   statLabel: {
-    fontSize: '0.725rem',
-    color: 'var(--slate-500)',
-    textTransform: 'uppercase',
+    fontSize: '0.7rem',
     fontWeight: 700,
-    letterSpacing: '0.5px',
+    textTransform: 'uppercase',
+    color: 'var(--slate-500)',
+    letterSpacing: '0.4px',
   },
   statVal: {
-    fontSize: '1.4rem',
+    fontSize: '1.25rem',
     fontWeight: 800,
     fontFamily: 'var(--font-mono)',
     color: 'var(--slate-900)',
   },
   controlsBar: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: '1rem',
     marginBottom: '1.75rem',
+    flexWrap: 'wrap',
   },
   searchWrapper: {
     position: 'relative',
-    maxWidth: 480,
+    flex: '1 1 320px',
+    maxWidth: 520,
+    display: 'flex',
+    alignItems: 'center',
   },
   searchIcon: {
     position: 'absolute',
     left: '0.9rem',
-    top: '50%',
-    transform: 'translateY(-50%)',
-    fontSize: '0.9rem',
-    opacity: 0.6,
+    color: 'var(--slate-400)',
+    fontSize: '0.95rem',
+    pointerEvents: 'none',
   },
   searchInput: {
     width: '100%',
-    padding: '0.7rem 2.25rem 0.7rem 2.4rem',
-    fontSize: '0.925rem',
+    padding: '0.75rem 2.2rem 0.75rem 2.4rem',
     borderRadius: 'var(--radius-md)',
     border: '1px solid var(--slate-300)',
-    background: '#fff',
+    background: '#ffffff',
+    fontSize: '0.9rem',
+    fontFamily: 'inherit',
     outline: 'none',
     boxShadow: 'var(--shadow-sm)',
-    fontFamily: 'inherit',
-    transition: 'border-color 0.15s ease',
   },
   clearSearchBtn: {
     position: 'absolute',
     right: '0.75rem',
-    top: '50%',
-    transform: 'translateY(-50%)',
     background: 'none',
     border: 'none',
     color: 'var(--slate-400)',
     cursor: 'pointer',
-    fontSize: '0.8rem',
+    fontSize: '0.85rem',
   },
-  errorBox: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.75rem',
-    padding: '1rem 1.25rem',
+  createBtn: {
+    padding: '0.75rem 1.25rem',
+    fontSize: '0.875rem',
+    fontWeight: 700,
+    whiteSpace: 'nowrap',
+  },
+  errorAlert: {
     background: 'var(--danger-light)',
     border: '1px solid var(--danger-border)',
     color: 'var(--danger-dark)',
+    padding: '1rem 1.25rem',
     borderRadius: 'var(--radius-md)',
     marginBottom: '1.5rem',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     fontWeight: 600,
   },
-  cardsGrid: {
+  emptyState: {
+    textAlign: 'center',
+    padding: '4rem 2rem',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  spinner: {
+    width: 38,
+    height: 38,
+    border: '3.5px solid var(--slate-200)',
+    borderTopColor: 'var(--primary)',
+    borderRadius: '50%',
+    animation: 'spin 0.8s linear infinite',
+  },
+  modulesGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))',
     gap: '1.5rem',
   },
-  card: {
+  moduleCard: {
     padding: '1.5rem',
     display: 'flex',
     flexDirection: 'column',
     justifyContent: 'space-between',
-    background: '#fff',
+    background: '#ffffff',
   },
-  cardHeader: {
+  moduleHeader: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     gap: '0.75rem',
     marginBottom: '1.25rem',
   },
-  shiftBadge: {
-    display: 'inline-block',
-    fontSize: '0.725rem',
-    fontWeight: 700,
-    padding: '0.2rem 0.55rem',
-    borderRadius: 'var(--radius-full)',
-    border: '1px solid transparent',
-    marginBottom: '0.5rem',
+  moduleTitleGroup: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.85rem',
   },
-  className: {
-    fontSize: '1.25rem',
-    fontWeight: 700,
+  shiftIconBox: {
+    fontSize: '1.5rem',
+    background: 'var(--slate-50)',
+    border: '1px solid var(--slate-200)',
+    padding: '0.45rem',
+    borderRadius: 'var(--radius-md)',
+    lineHeight: 1,
+  },
+  moduleClassName: {
+    fontSize: '1.15rem',
+    fontWeight: 800,
     color: 'var(--slate-900)',
-    letterSpacing: '-0.02em',
+    margin: 0,
     lineHeight: 1.25,
   },
-  statusPill: {
+  moduleShiftTag: {
+    fontSize: '0.75rem',
+    fontWeight: 600,
+    color: 'var(--slate-500)',
+  },
+  statusBadge: {
+    fontSize: '0.725rem',
+    fontWeight: 700,
+    padding: '0.2rem 0.6rem',
+    borderRadius: 'var(--radius-full)',
+    border: '1px solid transparent',
     whiteSpace: 'nowrap',
   },
-  openPill: {
-    fontSize: '0.725rem',
-    fontWeight: 700,
-    padding: '0.2rem 0.6rem',
-    borderRadius: 'var(--radius-full)',
-    background: 'var(--success-light)',
-    color: 'var(--success-dark)',
-    border: '1px solid var(--success-border)',
+  seatPillRow: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(4, 1fr)',
+    gap: '0.5rem',
+    background: 'var(--slate-50)',
+    border: '1px solid var(--slate-200)',
+    borderRadius: 'var(--radius-md)',
+    padding: '0.75rem',
+    marginBottom: '1.25rem',
   },
-  limitedPill: {
-    fontSize: '0.725rem',
-    fontWeight: 700,
-    padding: '0.2rem 0.6rem',
-    borderRadius: 'var(--radius-full)',
-    background: 'var(--warning-light)',
-    color: 'var(--warning-dark)',
-    border: '1px solid var(--warning-border)',
+  seatPill: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
   },
-  fullPill: {
-    fontSize: '0.725rem',
+  seatPillLabel: {
+    fontSize: '0.675rem',
+    textTransform: 'uppercase',
+    color: 'var(--slate-500)',
     fontWeight: 700,
-    padding: '0.2rem 0.6rem',
-    borderRadius: 'var(--radius-full)',
-    background: 'var(--danger-light)',
-    color: 'var(--danger-dark)',
-    border: '1px solid var(--danger-border)',
+  },
+  seatPillVal: {
+    fontSize: '1.1rem',
+    fontWeight: 800,
+    fontFamily: 'var(--font-mono)',
+    color: 'var(--slate-800)',
   },
   progressContainer: {
     marginBottom: '1.25rem',
   },
   progressBar: {
-    height: 8,
+    height: 7,
     borderRadius: 'var(--radius-full)',
-    background: 'var(--slate-100)',
+    background: 'var(--slate-200)',
     display: 'flex',
     overflow: 'hidden',
-    marginBottom: '0.5rem',
+    marginBottom: '0.4rem',
   },
-  progressSegment: {
-    height: '100%',
-    transition: 'width 0.4s ease',
-  },
-  progressLegend: {
+  progressLabelRow: {
     display: 'flex',
     justifyContent: 'space-between',
     fontSize: '0.725rem',
     color: 'var(--slate-500)',
-    fontWeight: 500,
-  },
-  legendItem: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.35rem',
-  },
-  legendDot: {
-    width: 6,
-    height: 6,
-    borderRadius: '50%',
-  },
-  kpiGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(4, 1fr)',
-    gap: '0.5rem',
-    background: 'var(--slate-50)',
-    padding: '0.75rem',
-    borderRadius: 'var(--radius-md)',
-    border: '1px solid var(--slate-200)',
-    marginBottom: '1.25rem',
-  },
-  kpiBox: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    textAlign: 'center',
-  },
-  kpiLabel: {
-    fontSize: '0.675rem',
-    color: 'var(--slate-500)',
-    textTransform: 'uppercase',
-    fontWeight: 700,
-    letterSpacing: '0.3px',
-    marginBottom: '0.15rem',
-  },
-  kpiVal: {
-    fontSize: '1.15rem',
-    fontWeight: 800,
-    fontFamily: 'var(--font-mono)',
-    color: 'var(--slate-800)',
-  },
-  cardError: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.5rem',
-    padding: '0.65rem 0.85rem',
-    background: 'var(--danger-light)',
-    border: '1px solid var(--danger-border)',
-    borderRadius: 'var(--radius-sm)',
-    color: 'var(--danger-dark)',
-    fontSize: '0.85rem',
     fontWeight: 600,
-    marginBottom: '1rem',
   },
-  applyBtn: {
+  moduleFooter: {
+    borderTop: '1px solid var(--slate-100)',
+    paddingTop: '1rem',
+  },
+  viewSeatsBtn: {
     width: '100%',
-    padding: '0.75rem',
-    fontSize: '0.95rem',
-  },
-  skeletonCard: {
-    background: '#fff',
-    border: '1px solid var(--slate-200)',
-    borderRadius: 'var(--radius-lg)',
-    padding: '1.5rem',
-  },
-  emptyState: {
-    textAlign: 'center',
-    padding: '4rem 2rem',
-    background: '#fff',
-    borderRadius: 'var(--radius-lg)',
-    border: '1px dashed var(--slate-300)',
-    maxWidth: 520,
-    margin: '2rem auto',
-  },
-  emptyIcon: {
-    fontSize: '3rem',
-    marginBottom: '1rem',
-  },
-  emptyTitle: {
-    fontSize: '1.25rem',
-    fontWeight: 700,
-    color: 'var(--slate-800)',
-    marginBottom: '0.5rem',
-  },
-  emptyText: {
-    color: 'var(--slate-500)',
+    padding: '0.75rem 1rem',
     fontSize: '0.925rem',
-    lineHeight: 1.5,
   },
 };
-
