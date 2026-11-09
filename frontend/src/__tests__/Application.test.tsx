@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, act } from '@testing-library/react';
-import React from 'react';
+
 import { ApplicationDetail } from '../components/ApplicationDetail';
 import { CountdownTimer } from '../components/CountdownTimer';
 
 // Mock fetch globally
 const mockFetch = vi.fn();
-global.fetch = mockFetch;
+globalThis.fetch = mockFetch;
 
 describe('Frontend Application Flow & Timer Tests', () => {
   beforeEach(() => {

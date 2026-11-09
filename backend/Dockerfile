@@ -7,7 +7,7 @@ COPY src/SchoolAdmission/SchoolAdmission.csproj ./src/SchoolAdmission/
 RUN dotnet restore ./src/SchoolAdmission/SchoolAdmission.csproj
 
 COPY src/SchoolAdmission/ ./src/SchoolAdmission/
-RUN dotnet publish ./src/SchoolAdmission/SchoolAdmission.csproj -c Release -o /app/publish --no-restore
+RUN dotnet publish ./src/SchoolAdmission/SchoolAdmission.csproj -c Release -o /app/publish 
 
 # ---- Runtime stage ----
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
