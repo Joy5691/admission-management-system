@@ -179,15 +179,6 @@ export function ClassList({
         /* Academic Class Modules Grid */
         <div style={styles.modulesGrid} className="modules-grid-responsive">
           {filtered.map(c => {
-                        const occupancyPct = c.totalSeats > 0 ? Math.round(((c.confirmedSeats + c.heldSeats) / c.totalSeats) * 100) : 0;
-            const isMorning = c.name.toLowerCase().includes('morning');
-            const isEvening = c.name.toLowerCase().includes('evening');
-            const shiftName = isMorning
-              ? (lang === 'bn' ? 'মর্নিং শিফট' : 'Morning Shift')
-              : isEvening
-              ? (lang === 'bn' ? 'ইভনিং শিফট' : 'Evening Shift')
-              : (lang === 'bn' ? 'ডে শিফট' : 'Day Shift');
-
             return (
               <div
                 key={c.id}
@@ -199,7 +190,6 @@ export function ClassList({
                 <div style={styles.moduleHeader}>
                   <div>
                     <h3 style={styles.moduleClassName}>{c.name}</h3>
-                    <span style={styles.moduleShiftTag}>{shiftName}</span>
                   </div>
                 </div>
 
@@ -244,10 +234,6 @@ export function ClassList({
                         background: 'var(--warning)',
                       }}
                     />
-                  </div>
-                  <div style={styles.progressLabelRow}>
-                    <span>{occupancyPct}% {t.occupied}</span>
-                    <span>{c.availableSeats} {t.seatsOpen}</span>
                   </div>
                 </div>
 
@@ -469,7 +455,7 @@ const styles: Record<string, React.CSSProperties> = {
     color: 'var(--slate-800)',
   },
   progressContainer: {
-    marginBottom: '1rem',
+    marginBottom: '0.85rem',
   },
   progressBar: {
     height: 6,
@@ -477,7 +463,7 @@ const styles: Record<string, React.CSSProperties> = {
     background: 'var(--slate-200)',
     display: 'flex',
     overflow: 'hidden',
-    marginBottom: '0.35rem',
+    marginBottom: 0,
   },
   progressLabelRow: {
     display: 'flex',

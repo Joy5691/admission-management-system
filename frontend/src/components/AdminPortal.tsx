@@ -375,8 +375,7 @@ export function AdminPortal({ onLogout }: AdminPortalProps) {
           ) : (
             <div style={styles.classList}>
               {classes.map((cls) => {
-                const occupancy = cls.totalSeats > 0 ? Math.round(((cls.confirmedSeats + cls.heldSeats) / cls.totalSeats) * 100) : 0;
-                const currentSeats = editingSeats[cls.id] ?? cls.totalSeats;
+                                const currentSeats = editingSeats[cls.id] ?? cls.totalSeats;
                 const isModified = currentSeats !== cls.totalSeats;
                 const isSavingThis = savingClassId === cls.id;
                 const feedbackForThis = seatSaveFeedback?.classId === cls.id ? seatSaveFeedback : null;
@@ -488,10 +487,7 @@ export function AdminPortal({ onLogout }: AdminPortalProps) {
                         }}
                       />
                     </div>
-                    <div style={styles.occupancyText}>
-                      <span>{occupancy}% Occupied</span>
-                      <span>{cls.availableSeats === 0 ? 'FULL' : 'OPEN'}</span>
-                    </div>
+
                   </div>
                 );
               })}
@@ -854,7 +850,7 @@ const styles: Record<string, React.CSSProperties> = {
     background: 'var(--slate-200)',
     display: 'flex',
     overflow: 'hidden',
-    marginBottom: '0.4rem',
+    marginBottom: 0,
   },
   occupancyText: {
     display: 'flex',
