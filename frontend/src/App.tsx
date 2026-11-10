@@ -96,7 +96,7 @@ function App() {
       <header style={styles.header}>
         <div className="top-header-inner">
           {/* Brand with Onnorokom Logo */}
-          <div className="brand-wrapper" onClick={handleBackToDashboard}>
+          <div className="brand-wrapper" onClick={() => { if (!isAdmin) handleBackToDashboard(); }}>
             <div style={styles.logoBadge} className="brand-logo-badge">
               <img
                 src="/logo.jpg"
@@ -145,29 +145,39 @@ function App() {
             {/* Admin Controls */}
             {isAdmin ? (
               <div style={styles.adminGroup}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setViewingHoldId(null);
-                    setSelectedClassId(null);
-                    setActiveTab('admin');
-                  }}
-                  className="btn-admin-header"
+                <span
                   style={{
-                    ...styles.adminBtn,
-                    background: activeTab === 'admin' ? 'var(--primary-dark)' : 'var(--primary)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    background: 'var(--primary-light)',
+                    color: 'var(--primary)',
+                    border: '1px solid var(--primary-border)',
+                    padding: '0.35rem 0.75rem',
+                    borderRadius: 'var(--radius-full)',
+                    fontSize: '0.8rem',
+                    fontWeight: 700,
                   }}
                 >
-                  <span className="btn-text-full">{t.adminPortal}</span>
-                  <span className="btn-text-short">{lang === 'bn' ? 'পোর্টাল' : 'Portal'}</span>
-                </button>
+                  {t.adminPortal}
+                </span>
                 <button
                   type="button"
                   onClick={handleLogout}
-                  className="btn-admin-header"
-                  style={styles.logoutBtn}
+                  className="btn btn-outline btn-admin-header"
+                  style={{
+                    padding: '0.35rem 0.85rem',
+                    fontSize: '0.825rem',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.35rem',
+                  }}
                   title={t.logout}
                 >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                    <polyline points="16 17 21 12 16 7"></polyline>
+                    <line x1="21" y1="12" x2="9" y2="12"></line>
+                  </svg>
                   {t.logout}
                 </button>
               </div>
@@ -186,8 +196,8 @@ function App() {
         </div>
       </header>
 
-      {/* Main Navigation Tabs */}
-      {!viewingHoldId && (
+      {/* Main Navigation Tabs (Hidden when in Admin Portal) */}
+      {!viewingHoldId && !isAdmin && (
         <nav style={styles.navBar}>
           <div style={styles.navInner} className="nav-inner-responsive">
             <TabButton
@@ -203,13 +213,6 @@ function App() {
               active={activeTab === 'my-applications'}
               onClick={() => setActiveTab('my-applications')}
             />
-            {isAdmin && (
-              <TabButton
-                label={t.adminTab}
-                active={activeTab === 'admin'}
-                onClick={() => setActiveTab('admin')}
-              />
-            )}
           </div>
         </nav>
       )}
@@ -217,7 +220,12 @@ function App() {
       {/* Main Content Area */}
       <main style={styles.main}>
         <ErrorBoundary>
-          {viewingHoldId ? (
+          {isAdmin ? (
+            <AdminPortal
+              onViewClassSeatMap={handleViewClassSeatMap}
+              onLogout={handleLogout}
+            />
+          ) : viewingHoldId ? (
             <ApplicationDetail
               holdId={viewingHoldId}
               studentId={studentId}
@@ -245,13 +253,6 @@ function App() {
                   onViewHold={handleViewHold}
                   onGoToClasses={() => setActiveTab('classes')}
                   onUpdateStudentId={setStudentId}
-                />
-              )}
-
-              {activeTab === 'admin' && (
-                <AdminPortal
-                  onViewClassSeatMap={handleViewClassSeatMap}
-                  onLogout={handleLogout}
                 />
               )}
             </>

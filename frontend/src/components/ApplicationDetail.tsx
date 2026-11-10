@@ -86,20 +86,22 @@ export function ApplicationDetail({ holdId, studentId, lang = 'en', onBack }: Pr
   const [remainingSec, setRemainingSec] = useState<number | null>(null);
   const chimePlayedRef = useRef(false);
 
-  // Student Full Name State (Instant auto-save)
+  // Student Full Name State
   const studentNameKey = 'studentName_' + holdId;
   const [studentName, setStudentName] = useState<string>(() => {
     return localStorage.getItem('studentName_' + holdId) || localStorage.getItem('studentName_default') || '';
   });
+  const [nameSavedToast, setNameSavedToast] = useState(false);
 
-  const handleNameChange = (val: string) => {
-    setStudentName(val);
+  const handleSaveStudentName = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const val = studentName.trim();
     try {
       localStorage.setItem(studentNameKey, val);
       localStorage.setItem('studentName_default', val);
-    } catch {
-      // ignore
-    }
+    } catch {}
+    setNameSavedToast(true);
+    setTimeout(() => setNameSavedToast(false), 3000);
   };
 
   const fetchHold = useCallback(async () => {
@@ -346,57 +348,61 @@ export function ApplicationDetail({ holdId, studentId, lang = 'en', onBack }: Pr
               )}
             </div>
 
-            {/* If Confirmed: Instant Fast Student Name Input */}
+            {/* If Confirmed: Student Full Name Entry Card with Button */}
             {effectiveStatus === 'CONFIRMED' && (
-              <div style={styles.nameEntryCard}>
-                <div style={styles.nameEntryHeader}>
-                  <label htmlFor="student-full-name-input" style={styles.nameEntryTitle}>
-                    {t.studentNameLabel}
-                  </label>
-                  {studentName.trim() ? (
-                    <span style={styles.autoSavedBadge}>
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <div style={styles.nameCard}>
+                <div style={styles.nameCardHeader}>
+                  <div style={styles.nameCardTitleRow}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--primary)' }}>
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                      <circle cx="12" cy="7" r="4"></circle>
+                    </svg>
+                    <label htmlFor="portal-student-name-input" style={styles.nameLabel}>
+                      {t.studentNameLabel}
+                    </label>
+                  </div>
+                  {nameSavedToast && (
+                    <span style={styles.saveSuccessBadge}>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
                         <polyline points="20 6 9 17 4 12"></polyline>
                       </svg>
-                      {lang === 'bn' ? 'সংরক্ষিত' : 'Saved to slip'}
-                    </span>
-                  ) : (
-                    <span style={styles.optionalBadge}>
-                      {lang === 'bn' ? 'রশিদের জন্য আবশ্যক' : 'Required for slip'}
+                      {lang === 'bn' ? 'সফলভাবে সংরক্ষিত!' : 'Saved successfully!'}
                     </span>
                   )}
                 </div>
 
-                <div style={styles.nameInputWrapper}>
-                  <svg style={styles.nameIcon} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                    <circle cx="12" cy="7" r="4"></circle>
-                  </svg>
-                  <input
-                    id="student-full-name-input"
-                    type="text"
-                    value={studentName}
-                    onChange={(e) => handleNameChange(e.target.value)}
-                    placeholder={lang === 'bn' ? 'যেমন: তাহমিদ আহমেদ' : 'e.g. Khalid Mahmud Joy'}
-                    style={styles.studentNameInput}
-                    autoComplete="name"
-                  />
-                  {studentName && (
-                    <button
-                      type="button"
-                      onClick={() => handleNameChange('')}
-                      style={styles.clearNameBtn}
-                      title="Clear"
-                    >
-                      ✕
-                    </button>
-                  )}
-                </div>
-                <p style={styles.nameEntryHint}>
+                <p style={styles.nameSubtext}>
                   {lang === 'bn'
-                    ? 'নামটি টাইপ করলেই স্বয়ংক্রিয়ভাবে অফিসিয়াল ভর্তি রশিদে যুক্ত হয়ে যাবে।'
-                    : 'Changes are automatically saved and immediately reflected on your official admission slip.'}
+                    ? 'অফিসিয়াল ভর্তি রশিদে শিক্ষার্থীর পুরো নাম প্রদর্শনের জন্য নিচে নাম লিখে "সংরক্ষণ করুন" বাটনে ক্লিক করুন।'
+                    : 'Enter the student full name below and click Save Name to include it on the official admission confirmation slip.'}
                 </p>
+
+                <form onSubmit={handleSaveStudentName} style={styles.nameForm}>
+                  <div style={styles.nameInputContainer}>
+                    <input
+                      id="portal-student-name-input"
+                      type="text"
+                      value={studentName}
+                      onChange={(e) => {
+                        setStudentName(e.target.value);
+                        setNameSavedToast(false);
+                      }}
+                      placeholder={lang === 'bn' ? 'যেমন: খালিদ মাহমুদ জয়' : 'e.g. Khalid Mahmud Joy'}
+                      style={styles.nameInputField}
+                      autoComplete="name"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    className="btn btn-primary"
+                    style={styles.saveBtn}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                    <span>{nameSavedToast ? (lang === 'bn' ? 'সংরক্ষিত ✓' : 'Saved ✓') : (lang === 'bn' ? 'সংরক্ষণ করুন' : 'Save Name')}</span>
+                  </button>
+                </form>
               </div>
             )}
 
@@ -551,7 +557,7 @@ export function ApplicationDetail({ holdId, studentId, lang = 'en', onBack }: Pr
           className={className}
           studentId={studentId}
           studentName={studentName}
-          onSaveStudentName={handleNameChange}
+          
           lang={lang}
           onClose={() => setShowSlip(false)}
         />
@@ -882,5 +888,88 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: '0.925rem',
     fontWeight: 700,
     color: '#ffffff',
+  },
+  nameCard: {
+    background: '#ffffff',
+    border: '1.5px solid var(--slate-200)',
+    borderRadius: 'var(--radius-lg)',
+    padding: '1.25rem 1.5rem',
+    marginTop: '1.5rem',
+    boxShadow: 'var(--shadow-sm)',
+  },
+  nameCardHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: '0.75rem',
+    marginBottom: '0.35rem',
+  },
+  nameCardTitleRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.5rem',
+  },
+  nameLabel: {
+    fontSize: '1rem',
+    fontWeight: 800,
+    color: 'var(--slate-900)',
+    cursor: 'pointer',
+  },
+  nameSubtext: {
+    fontSize: '0.825rem',
+    color: 'var(--slate-500)',
+    marginBottom: '1rem',
+    lineHeight: 1.4,
+  },
+  saveSuccessBadge: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '0.35rem',
+    fontSize: '0.75rem',
+    fontWeight: 700,
+    color: 'var(--success-dark)',
+    background: 'var(--success-light)',
+    border: '1px solid var(--success-border)',
+    padding: '0.2rem 0.65rem',
+    borderRadius: 'var(--radius-full)',
+  },
+  nameForm: {
+    display: 'flex',
+    gap: '0.75rem',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+  },
+  nameInputContainer: {
+    flex: '1 1 280px',
+  },
+  nameInputField: {
+    width: '100%',
+    height: '46px',
+    padding: '0 1rem',
+    borderRadius: 'var(--radius-md)',
+    border: '1.5px solid var(--slate-300)',
+    fontSize: '0.95rem',
+    fontWeight: 600,
+    color: 'var(--slate-900)',
+    background: '#ffffff',
+    outline: 'none',
+    boxShadow: 'var(--shadow-sm)',
+    transition: 'all 0.15s ease',
+    fontFamily: 'inherit',
+    boxSizing: 'border-box',
+  },
+  saveBtn: {
+    height: '46px',
+    padding: '0 1.5rem',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '0.5rem',
+    fontSize: '0.925rem',
+    fontWeight: 700,
+    borderRadius: 'var(--radius-md)',
+    whiteSpace: 'nowrap',
+    boxShadow: 'var(--shadow-sm)',
+    cursor: 'pointer',
   },
 };

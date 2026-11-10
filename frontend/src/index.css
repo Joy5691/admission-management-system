@@ -672,29 +672,72 @@ body {
 
 /* Print Layout */
 @media print {
-  body {
-    background: #ffffff !important;
+  @page {
+    size: auto;
+    margin: 8mm 10mm;
   }
-  .no-print, .no-print-backdrop {
+
+  html, body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  /* Hide app tree and action controls when printing */
+  #root, .no-print, .no-print-backdrop {
     display: none !important;
   }
-  .printable-admission-slip {
-    position: absolute;
-    left: 0;
-    top: 0;
+
+  /* Flatten modal portal hierarchy so it acts as standard printable page */
+  .modal-backdrop {
+    position: static !important;
+    inset: auto !important;
     width: 100% !important;
+    height: auto !important;
+    background: transparent !important;
+    backdrop-filter: none !important;
+    padding: 0 !important;
     margin: 0 !important;
-    padding: 24px !important;
-    border: 2px solid #1e6bb8 !important;
-    border-radius: 12px !important;
+    display: block !important;
+    overflow: visible !important;
+    z-index: auto !important;
+  }
+
+  .modal-dialog {
+    max-width: 100% !important;
+    width: 100% !important;
+    max-height: none !important;
+    height: auto !important;
+    overflow: visible !important;
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+  }
+
+  .printable-admission-slip {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 6px !important;
     box-shadow: none !important;
     background: #ffffff !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
-  body * {
-    visibility: hidden;
-  }
-  .printable-admission-slip, .printable-admission-slip * {
-    visibility: visible;
+
+  /* Force exact color reproduction for headers, borders, and seals */
+  *, *::before, *::after {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 }
 
@@ -708,4 +751,9 @@ body {
 #student-full-name-input:focus {
   border-color: var(--primary) !important;
   box-shadow: 0 0 0 3px rgba(30, 107, 184, 0.16) !important;
+}
+
+#portal-student-name-input:focus {
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 3px rgba(30, 107, 184, 0.18) !important;
 }

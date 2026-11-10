@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { createPortal } from 'react-dom';
 import { Language, translations } from '../i18n';
 
@@ -14,7 +14,6 @@ interface Props {
   className: string;
   studentId: string;
   studentName?: string;
-  onSaveStudentName?: (name: string) => void;
   lang?: Language;
   onClose: () => void;
 }
@@ -23,8 +22,7 @@ export function AdmissionSlipModal({
   hold,
   className,
   studentId,
-  studentName: initialStudentName = '',
-  onSaveStudentName,
+  studentName = '',
   lang = 'en',
   onClose,
 }: Props) {
@@ -34,30 +32,11 @@ export function AdmissionSlipModal({
     ? `${rawId.slice(0, 4)}-${rawId.slice(4, 8)}-${rawId.slice(8, 12)}-${rawId.slice(12)}`
     : rawId || '—';
 
-  // Manage student full name locally and sync with localStorage
-  const storageKey = 'studentName_' + hold.holdId;
-  const [name, setName] = useState<string>(() => {
-    return (
-      initialStudentName ||
-      localStorage.getItem(storageKey) ||
-      localStorage.getItem('studentName_default') ||
-      ''
-    );
-  });
-  const [isEditingName, setIsEditingName] = useState(false);
-
-  const handleNameChange = (val: string) => {
-    setName(val);
-    try {
-      localStorage.setItem(storageKey, val);
-      localStorage.setItem('studentName_default', val);
-    } catch {
-      // ignore storage errors
-    }
-    if (onSaveStudentName) {
-      onSaveStudentName(val);
-    }
-  };
+  const displayName =
+    studentName ||
+    localStorage.getItem('studentName_' + hold.holdId) ||
+    localStorage.getItem('studentName_default') ||
+    '—';
 
   const dateStr = hold.confirmedAt
     ? new Date(hold.confirmedAt).toLocaleDateString(lang === 'bn' ? 'bn-BD' : 'en-US', {
@@ -78,14 +57,14 @@ export function AdmissionSlipModal({
   };
 
   return createPortal(
-    <div className="modal-backdrop no-print-backdrop" onClick={onClose}>
+    <div className="modal-backdrop" onClick={onClose}>
       <div
         className="modal-dialog animate-slide-up"
         style={styles.modalDialog}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Printable Slip Container */}
-        <div className="printable-admission-slip" style={styles.outerFrame}>
+        <div id="printable-admission-slip" className="printable-admission-slip" style={styles.outerFrame}>
           <div style={styles.innerFrame}>
             {/* Top 3-Section Header Bar (Matching Sample Slip Format) */}
             <div style={styles.topHeaderGrid}>
@@ -122,41 +101,7 @@ export function AdmissionSlipModal({
                 <div style={styles.metaRow}>
                   <span style={styles.metaField}>{t.studentNameLabel}</span>
                   <span style={styles.metaColon}>:</span>
-                  <div style={styles.metaValueArea}>
-                    {isEditingName ? (
-                      <div style={styles.nameForm} className="no-print">
-                        <input
-                          type="text"
-                          value={name}
-                          onChange={(e) => handleNameChange(e.target.value)}
-                          placeholder={lang === 'bn' ? 'শিক্ষার্থীর নাম' : 'e.g. Khalid Mahmud Joy'}
-                          style={styles.nameInput}
-                          autoFocus
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setIsEditingName(false)}
-                          style={styles.saveNameBtn}
-                          title="Done"
-                        >
-                          ✓
-                        </button>
-                      </div>
-                    ) : (
-                      <div style={styles.nameDisplayRow}>
-                        <strong style={styles.nameText}>{name || '—'}</strong>
-                        <button
-                          type="button"
-                          onClick={() => setIsEditingName(true)}
-                          style={styles.editNameBtn}
-                          className="no-print"
-                          title={t.editStudentNameBtn}
-                        >
-                          ✎
-                        </button>
-                      </div>
-                    )}
-                  </div>
+                  <strong style={styles.nameText}>{displayName}</strong>
                 </div>
 
                 <div style={styles.metaRow}>
@@ -519,57 +464,10 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: '0.725rem',
     color: '#475569',
   },
-  metaValueArea: {
-    display: 'flex',
-    alignItems: 'center',
-  },
-  nameForm: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.35rem',
-    width: '100%',
-  },
-  nameInput: {
-    padding: '0.25rem 0.5rem',
-    fontSize: '0.85rem',
-    fontWeight: 700,
-    border: '1.5px solid var(--primary)',
-    borderRadius: 4,
-    outline: 'none',
-    width: '100%',
-    maxWidth: 200,
-    background: '#ffffff',
-  },
-  saveNameBtn: {
-    background: 'var(--primary)',
-    color: '#ffffff',
-    border: 'none',
-    padding: '0.25rem 0.5rem',
-    fontSize: '0.7rem',
-    fontWeight: 700,
-    borderRadius: 4,
-    cursor: 'pointer',
-    whiteSpace: 'nowrap',
-  },
-  nameDisplayRow: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.5rem',
-  },
   nameText: {
     color: '#0f172a',
     fontWeight: 800,
     fontSize: '0.85rem',
-  },
-  editNameBtn: {
-    background: 'none',
-    border: 'none',
-    color: 'var(--primary)',
-    fontSize: '0.7rem',
-    fontWeight: 700,
-    cursor: 'pointer',
-    padding: '0.1rem 0.3rem',
-    borderRadius: 3,
   },
   seatBadge: {
     display: 'inline-block',
