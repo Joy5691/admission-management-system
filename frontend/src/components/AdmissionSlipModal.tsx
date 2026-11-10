@@ -44,22 +44,18 @@ export function AdmissionSlipModal({
       ''
     );
   });
-  const [isEditingName, setIsEditingName] = useState(!name);
-  const [nameInput, setNameInput] = useState(name);
+  const [isEditingName, setIsEditingName] = useState(false);
 
-  const handleSaveName = (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    const trimmed = nameInput.trim();
-    setName(trimmed);
-    setIsEditingName(false);
+  const handleNameChange = (val: string) => {
+    setName(val);
     try {
-      localStorage.setItem(storageKey, trimmed);
-      localStorage.setItem('studentName_default', trimmed);
+      localStorage.setItem(storageKey, val);
+      localStorage.setItem('studentName_default', val);
     } catch {
       // ignore storage errors
     }
     if (onSaveStudentName) {
-      onSaveStudentName(trimmed);
+      onSaveStudentName(val);
     }
   };
 
@@ -128,33 +124,35 @@ export function AdmissionSlipModal({
                   <span style={styles.metaColon}>:</span>
                   <div style={styles.metaValueArea}>
                     {isEditingName ? (
-                      <form onSubmit={handleSaveName} style={styles.nameForm} className="no-print">
+                      <div style={styles.nameForm} className="no-print">
                         <input
                           type="text"
-                          value={nameInput}
-                          onChange={(e) => setNameInput(e.target.value)}
-                          placeholder="e.g. Wayne Doorprize"
+                          value={name}
+                          onChange={(e) => handleNameChange(e.target.value)}
+                          placeholder={lang === 'bn' ? 'শিক্ষার্থীর নাম' : 'e.g. Khalid Mahmud Joy'}
                           style={styles.nameInput}
                           autoFocus
                         />
-                        <button type="submit" style={styles.saveNameBtn}>
-                          {t.saveStudentNameBtn}
+                        <button
+                          type="button"
+                          onClick={() => setIsEditingName(false)}
+                          style={styles.saveNameBtn}
+                          title="Done"
+                        >
+                          ✓
                         </button>
-                      </form>
+                      </div>
                     ) : (
                       <div style={styles.nameDisplayRow}>
                         <strong style={styles.nameText}>{name || '—'}</strong>
                         <button
                           type="button"
-                          onClick={() => {
-                            setNameInput(name);
-                            setIsEditingName(true);
-                          }}
+                          onClick={() => setIsEditingName(true)}
                           style={styles.editNameBtn}
                           className="no-print"
                           title={t.editStudentNameBtn}
                         >
-                          ✎ {t.editStudentNameBtn}
+                          ✎
                         </button>
                       </div>
                     )}
@@ -532,14 +530,15 @@ const styles: Record<string, React.CSSProperties> = {
     width: '100%',
   },
   nameInput: {
-    padding: '0.2rem 0.45rem',
-    fontSize: '0.8rem',
+    padding: '0.25rem 0.5rem',
+    fontSize: '0.85rem',
     fontWeight: 700,
     border: '1.5px solid var(--primary)',
     borderRadius: 4,
     outline: 'none',
     width: '100%',
-    maxWidth: 160,
+    maxWidth: 200,
+    background: '#ffffff',
   },
   saveNameBtn: {
     background: 'var(--primary)',

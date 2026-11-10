@@ -703,3 +703,9 @@ body {
   border-color: var(--primary) !important;
   box-shadow: 0 0 0 3px rgba(30, 107, 184, 0.15) !important;
 }
+
+/* Student Name Input Focus & Styling */
+#student-full-name-input:focus {
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 3px rgba(30, 107, 184, 0.16) !important;
+}
