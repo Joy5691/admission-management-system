@@ -1025,7 +1025,7 @@ body {
     background: transparent !important;
   }
 
-  .printable-admission-slip {
+  .printable-admission-slip, .printable-section-roster {
     display: block !important;
     position: static !important;
     width: 100% !important;
@@ -1036,6 +1036,12 @@ body {
     background: #ffffff !important;
     page-break-inside: avoid !important;
     break-inside: avoid !important;
+  }
+
+  .printable-section-roster .print-header {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
   }
 
   /* Force exact color reproduction for headers, borders, and seals */

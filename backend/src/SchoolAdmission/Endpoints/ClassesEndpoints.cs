@@ -13,6 +13,10 @@ public static class ClassesEndpoints
         app.MapPost("/classes", CreateClass);
         app.MapGet("/classes", GetAllClasses);
         app.MapGet("/classes/{classId:guid}", GetClassById);
+        app.MapGet("/classes/{classId:guid}/confirmed-students", GetConfirmedStudents);
+        app.MapGet("/classes/{classId:guid}/sections", GetClassSections);
+        app.MapPost("/classes/{classId:guid}/sections", SaveClassSections);
+        app.MapPost("/classes/{classId:guid}/demo-seed", SeedDemoStudents);
     }
 
     // POST /classes → 201 { id, name, totalSeats }
@@ -142,6 +146,155 @@ public static class ClassesEndpoints
             await conn.CloseAsync();
         }
     }
+
+    // GET /classes/{classId}/confirmed-students
+    private static async Task<IResult> GetConfirmedStudents(Guid classId, AppDbContext db)
+    {
+        var conn = (NpgsqlConnection)db.Database.GetDbConnection();
+        await conn.OpenAsync();
+        try
+        {
+            await using var cmd = new NpgsqlCommand(@"
+                SELECT id, student_id, confirmed_at, created_at
+                FROM holds
+                WHERE class_id = @classId AND status = 'CONFIRMED'
+                ORDER BY confirmed_at ASC NULLS LAST, created_at ASC", conn);
+            cmd.Parameters.AddWithValue("classId", classId);
+            await using var reader = await cmd.ExecuteReaderAsync();
+            var list = new List<object>();
+            var seatNum = 1;
+            while (await reader.ReadAsync())
+            {
+                list.Add(new
+                {
+                    holdId = reader.GetGuid(0),
+                    studentId = reader.GetString(1),
+                    confirmedAt = reader.IsDBNull(2) ? null : reader.GetDateTime(2).ToString("o"),
+                    createdAt = reader.GetDateTime(3).ToString("o"),
+                    seatNumber = seatNum++
+                });
+            }
+            return Results.Ok(list);
+        }
+        finally
+        {
+            await conn.CloseAsync();
+        }
+    }
+
+    // GET /classes/{classId}/sections
+    private static async Task<IResult> GetClassSections(Guid classId, AppDbContext db)
+    {
+        var conn = (NpgsqlConnection)db.Database.GetDbConnection();
+        await conn.OpenAsync();
+        try
+        {
+            await using var cmd = new NpgsqlCommand(@"
+                SELECT section_size, data_json, updated_at
+                FROM class_sections
+                WHERE class_id = @classId", conn);
+            cmd.Parameters.AddWithValue("classId", classId);
+            await using var reader = await cmd.ExecuteReaderAsync();
+            if (!await reader.ReadAsync())
+                return Results.Ok(new { exists = false, sectionSize = 30, sections = Array.Empty<object>() });
+
+            var sectionSize = reader.GetInt32(0);
+            var json = reader.GetString(1);
+            var updatedAt = reader.GetDateTime(2).ToString("o");
+            return Results.Ok(new
+            {
+                exists = true,
+                sectionSize,
+                updatedAt,
+                sections = System.Text.Json.JsonDocument.Parse(json).RootElement
+            });
+        }
+        finally
+        {
+            await conn.CloseAsync();
+        }
+    }
+
+    // POST /classes/{classId}/sections
+    private static async Task<IResult> SaveClassSections(
+        Guid classId,
+        [FromBody] SaveSectionsRequest req,
+        AppDbContext db)
+    {
+        var conn = (NpgsqlConnection)db.Database.GetDbConnection();
+        await conn.OpenAsync();
+        try
+        {
+            var json = System.Text.Json.JsonSerializer.Serialize(req.Sections);
+            await using var cmd = new NpgsqlCommand(@"
+                INSERT INTO class_sections (class_id, section_size, data_json, updated_at)
+                VALUES (@classId, @size, @json, now())
+                ON CONFLICT (class_id)
+                DO UPDATE SET section_size = EXCLUDED.section_size, data_json = EXCLUDED.data_json, updated_at = now()", conn);
+            cmd.Parameters.AddWithValue("classId", classId);
+            cmd.Parameters.AddWithValue("size", req.SectionSize <= 0 ? 30 : req.SectionSize);
+            cmd.Parameters.AddWithValue("json", json);
+            await cmd.ExecuteNonQueryAsync();
+            return Results.Ok(new { success = true });
+        }
+        finally
+        {
+            await conn.CloseAsync();
+        }
+    }
+
+    // POST /classes/{classId}/demo-seed?count=160
+    private static async Task<IResult> SeedDemoStudents(
+        Guid classId,
+        [FromQuery] int? count,
+        AppDbContext db)
+    {
+        var seedCount = (count == null || count <= 0) ? 160 : Math.Min(count.Value, 300);
+        var cls = await db.Classes.FindAsync(classId);
+        if (cls == null) return Results.NotFound();
+
+        if (cls.TotalSeats < seedCount)
+        {
+            cls.TotalSeats = seedCount;
+            await db.SaveChangesAsync();
+        }
+
+        var conn = (NpgsqlConnection)db.Database.GetDbConnection();
+        await conn.OpenAsync();
+        try
+        {
+            await using var countCmd = new NpgsqlCommand(
+                "SELECT count(*) FROM holds WHERE class_id=@classId AND status='CONFIRMED'", conn);
+            countCmd.Parameters.AddWithValue("classId", classId);
+            var existing = (long)(await countCmd.ExecuteScalarAsync())!;
+
+            var toAdd = seedCount - (int)existing;
+            if (toAdd > 0)
+            {
+                for (int i = 1; i <= toAdd; i++)
+                {
+                    var studentNum = existing + i;
+                    var studentId = $"2015{studentNum:D13}";
+                    await using var insCmd = new NpgsqlCommand(@"
+                        INSERT INTO holds (id, class_id, student_id, status, expires_at, confirmed_at)
+                        VALUES (@id, @classId, @studentId, 'CONFIRMED', now() + interval '1 day', now() - (interval '1 minute' * @min))
+                        ON CONFLICT DO NOTHING", conn);
+                    insCmd.Parameters.AddWithValue("id", Guid.NewGuid());
+                    insCmd.Parameters.AddWithValue("classId", classId);
+                    insCmd.Parameters.AddWithValue("studentId", studentId);
+                    insCmd.Parameters.AddWithValue("min", toAdd - i);
+                    await insCmd.ExecuteNonQueryAsync();
+                }
+            }
+            return Results.Ok(new { success = true, seeded = seedCount });
+        }
+        finally
+        {
+            await conn.CloseAsync();
+        }
+    }
 }
+
+public record SaveSectionsRequest(int SectionSize, object Sections);
 
 public record CreateClassRequest(string Name, int TotalSeats);

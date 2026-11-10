@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { apiFetch, friendlyError } from '../api/client';
 import { ClassInfo } from '../types';
+import { SectionDividerModal } from './SectionDividerModal';
 
 const CLASS_OPTIONS = [
   'Playgroup',
@@ -35,6 +36,7 @@ interface AdminPortalProps {
 export function AdminPortal({ onViewClassSeatMap, onLogout }: AdminPortalProps) {
   const [classes, setClasses] = useState<ClassInfo[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedSectionClass, setSelectedSectionClass] = useState<ClassInfo | null>(null);
 
   // Form State
   const [selectedClassLevel, setSelectedClassLevel] = useState('Class 6');
@@ -302,16 +304,26 @@ export function AdminPortal({ onViewClassSeatMap, onLogout }: AdminPortalProps) 
                         </div>
                       </div>
 
-                      {onViewClassSeatMap && (
+                      <div style={{ display: 'flex', gap: '0.45rem', flexWrap: 'wrap', alignItems: 'center' }}>
                         <button
                           type="button"
-                          onClick={() => onViewClassSeatMap(cls.id)}
-                          className="btn btn-outline"
-                          style={styles.viewSeatMapBtn}
+                          onClick={() => setSelectedSectionClass(cls)}
+                          className="btn btn-primary"
+                          style={styles.divideSectionsBtn}
                         >
-                          Seat Map →
+                          Divide Sections
                         </button>
-                      )}
+                        {onViewClassSeatMap && (
+                          <button
+                            type="button"
+                            onClick={() => onViewClassSeatMap(cls.id)}
+                            className="btn btn-outline"
+                            style={styles.viewSeatMapBtn}
+                          >
+                            Seat Map →
+                          </button>
+                        )}
+                      </div>
                     </div>
 
                     {/* Progress Bar */}
@@ -340,6 +352,13 @@ export function AdminPortal({ onViewClassSeatMap, onLogout }: AdminPortalProps) 
           )}
         </div>
       </div>
+      {selectedSectionClass && (
+        <SectionDividerModal
+          classInfo={selectedSectionClass}
+          onClose={() => setSelectedSectionClass(null)}
+          onSectionsSaved={() => loadClasses(false)}
+        />
+      )}
     </div>
   );
 }
@@ -578,6 +597,14 @@ const styles: Record<string, React.CSSProperties> = {
     padding: '0.15rem 0.5rem',
     borderRadius: 'var(--radius-full)',
     border: '1px solid var(--slate-200)',
+  },
+  divideSectionsBtn: {
+    padding: '0.45rem 0.85rem',
+    fontSize: '0.8rem',
+    fontWeight: 700,
+    borderRadius: 'var(--radius-sm)',
+    whiteSpace: 'nowrap',
+    cursor: 'pointer',
   },
   viewSeatMapBtn: {
     fontSize: '0.75rem',

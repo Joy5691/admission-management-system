@@ -77,6 +77,16 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_active_hold_per_student_class
 
 CREATE INDEX IF NOT EXISTS ix_holds_class_status ON holds (class_id, status, expires_at);
 CREATE INDEX IF NOT EXISTS ix_holds_student ON holds (student_id);
+
+CREATE TABLE IF NOT EXISTS class_sections (
+  id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  class_id     uuid NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
+  section_size int NOT NULL DEFAULT 30,
+  data_json    text NOT NULL,
+  created_at   timestamptz NOT NULL DEFAULT now(),
+  updated_at   timestamptz NOT NULL DEFAULT now(),
+  UNIQUE(class_id)
+);
 ");
     }
 }
