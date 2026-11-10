@@ -33,10 +33,15 @@ interface AdminPortalProps {
   onLogout: () => void;
 }
 
-export function AdminPortal({ onViewClassSeatMap, onLogout }: AdminPortalProps) {
+export function AdminPortal({ onLogout }: AdminPortalProps) {
   const [classes, setClasses] = useState<ClassInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedSectionClass, setSelectedSectionClass] = useState<ClassInfo | null>(null);
+
+  // Seat edit state
+  const [editingSeats, setEditingSeats] = useState<Record<string, number>>({});
+  const [savingClassId, setSavingClassId] = useState<string | null>(null);
+  const [seatSaveFeedback, setSeatSaveFeedback] = useState<{ classId: string; success: boolean; msg: string } | null>(null);
 
   // Form State
   const [selectedClassLevel, setSelectedClassLevel] = useState('Class 6');
@@ -49,9 +54,9 @@ export function AdminPortal({ onViewClassSeatMap, onLogout }: AdminPortalProps) 
   // Calculated Class Name
   const finalClassName = useMemo(() => {
     if (selectedClassLevel === 'Custom...') {
-      return customClassName ? `${customClassName} - ${selectedShift}` : `${selectedShift}`;
+      return customClassName ? customClassName + ' - ' + selectedShift : selectedShift;
     }
-    return `${selectedClassLevel} - ${selectedShift}`;
+    return selectedClassLevel + ' - ' + selectedShift;
   }, [selectedClassLevel, customClassName, selectedShift]);
 
   // Fetch classes
@@ -94,13 +99,65 @@ export function AdminPortal({ onViewClassSeatMap, onLogout }: AdminPortalProps) 
       });
       setFeedback({
         type: 'success',
-        message: `Successfully created "${created.name}" with ${created.totalSeats} seats!`,
+        message: 'Successfully created "' + created.name + '" with ' + created.totalSeats + ' seats!',
       });
       loadClasses(false);
     } catch (err: any) {
       setFeedback({ type: 'error', message: friendlyError(err) });
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleAdjustSeat = (classId: string, currentTotal: number, confirmedCount: number, delta: number) => {
+    setEditingSeats((prev) => {
+      const current = prev[classId] ?? currentTotal;
+      const next = Math.max(confirmedCount, current + delta);
+      return { ...prev, [classId]: next };
+    });
+  };
+
+  const handleSeatInputChange = (classId: string, confirmedCount: number, val: number) => {
+    setEditingSeats((prev) => ({
+      ...prev,
+      [classId]: Math.max(confirmedCount, val || 0),
+    }));
+  };
+
+  const handleSaveSeats = async (cls: ClassInfo) => {
+    const targetSeats = editingSeats[cls.id] ?? cls.totalSeats;
+    if (targetSeats === cls.totalSeats) return;
+    if (targetSeats < cls.confirmedSeats) {
+      setSeatSaveFeedback({ classId: cls.id, success: false, msg: 'Min ' + cls.confirmedSeats + ' seats' });
+      return;
+    }
+
+    setSavingClassId(cls.id);
+    setSeatSaveFeedback(null);
+    try {
+      const updated = await apiFetch('/classes/' + cls.id + '/seats', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ totalSeats: targetSeats }),
+      });
+      setClasses((prev) =>
+        prev.map((c) =>
+          c.id === cls.id
+            ? { ...c, totalSeats: updated.totalSeats, availableSeats: updated.availableSeats }
+            : c
+        )
+      );
+      setEditingSeats((prev) => {
+        const next = { ...prev };
+        delete next[cls.id];
+        return next;
+      });
+      setSeatSaveFeedback({ classId: cls.id, success: true, msg: 'Saved!' });
+      setTimeout(() => setSeatSaveFeedback(null), 2500);
+    } catch (err: any) {
+      setSeatSaveFeedback({ classId: cls.id, success: false, msg: friendlyError(err) });
+    } finally {
+      setSavingClassId(null);
     }
   };
 
@@ -112,7 +169,7 @@ export function AdminPortal({ onViewClassSeatMap, onLogout }: AdminPortalProps) 
 
   return (
     <div style={styles.container} className="animate-fade-in admin-container-responsive">
-      {/* Top Banner */}
+      {/* Top Header */}
       <div style={styles.topHeader} className="admin-header-responsive">
         <div>
           <h1 style={styles.title}>Admin Admission & Shift Management</h1>
@@ -123,27 +180,55 @@ export function AdminPortal({ onViewClassSeatMap, onLogout }: AdminPortalProps) 
         </button>
       </div>
 
-      {/* Global Stat Metrics */}
-      <div style={styles.metricsGrid} className="admin-metrics-grid-responsive">
-        <div className="card" style={styles.metricCard}>
-          <span style={styles.metricLabel}>Total Classes</span>
-          <span style={styles.metricVal}>{classes.length}</span>
+      {/* Compact Global Stat Metrics Overview */}
+      <div className="card admin-overview-card" style={styles.overviewCard}>
+        <div style={styles.metricsRow} className="admin-metrics-row-responsive">
+          <div style={styles.metricItem}>
+            <span style={styles.metricLabel}>Total Classes</span>
+            <span style={styles.metricVal}>{classes.length}</span>
+          </div>
+          <div style={styles.metricDivider} className="metric-divider" />
+          <div style={styles.metricItem}>
+            <span style={styles.metricLabel}>Total Capacity</span>
+            <span style={styles.metricVal}>{totalCapacity}</span>
+          </div>
+          <div style={styles.metricDivider} className="metric-divider" />
+          <div style={styles.metricItem}>
+            <span style={{ ...styles.metricLabel, color: 'var(--primary)' }}>Available Seats</span>
+            <span style={{ ...styles.metricVal, color: 'var(--primary)' }}>{totalAvailable}</span>
+          </div>
+          <div style={styles.metricDivider} className="metric-divider" />
+          <div style={styles.metricItem}>
+            <span style={{ ...styles.metricLabel, color: 'var(--warning-dark)' }}>Held</span>
+            <span style={{ ...styles.metricVal, color: 'var(--warning-dark)' }}>{totalHeld}</span>
+          </div>
+          <div style={styles.metricDivider} className="metric-divider" />
+          <div style={styles.metricItem}>
+            <span style={{ ...styles.metricLabel, color: 'var(--success-dark)' }}>Confirmed</span>
+            <span style={{ ...styles.metricVal, color: 'var(--success-dark)' }}>{totalConfirmed}</span>
+          </div>
         </div>
-        <div className="card" style={styles.metricCard}>
-          <span style={styles.metricLabel}>Total Capacity</span>
-          <span style={styles.metricVal}>{totalCapacity}</span>
-        </div>
-        <div className="card" style={{ ...styles.metricCard, background: '#ebf4fc', borderColor: '#bcd9f5' }}>
-          <span style={{ ...styles.metricLabel, color: 'var(--primary)' }}>Available Seats</span>
-          <span style={{ ...styles.metricVal, color: 'var(--primary)' }}>{totalAvailable}</span>
-        </div>
-        <div className="card" style={{ ...styles.metricCard, background: '#fffbeb', borderColor: '#fde68a' }}>
-          <span style={{ ...styles.metricLabel, color: 'var(--warning-dark)' }}>Held</span>
-          <span style={{ ...styles.metricVal, color: 'var(--warning-dark)' }}>{totalHeld}</span>
-        </div>
-        <div className="card" style={{ ...styles.metricCard, background: '#ecfdf5', borderColor: '#a7f3d0' }}>
-          <span style={{ ...styles.metricLabel, color: 'var(--success-dark)' }}>Confirmed</span>
-          <span style={{ ...styles.metricVal, color: 'var(--success-dark)' }}>{totalConfirmed}</span>
+
+        {/* Global Occupancy Bar */}
+        <div style={styles.globalProgressWrapper}>
+          <div style={styles.globalProgressBar}>
+            <div
+              style={{
+                width: (totalCapacity > 0 ? (totalConfirmed / totalCapacity) * 100 : 0) + '%',
+                background: 'var(--success-dark)',
+              }}
+            />
+            <div
+              style={{
+                width: (totalCapacity > 0 ? (totalHeld / totalCapacity) * 100 : 0) + '%',
+                background: 'var(--warning)',
+              }}
+            />
+          </div>
+          <div style={styles.globalProgressLabels}>
+            <span>{totalCapacity > 0 ? Math.round(((totalConfirmed + totalHeld) / totalCapacity) * 100) : 0}% School Occupancy</span>
+            <span>{totalConfirmed} of {totalCapacity} Seats Filled</span>
+          </div>
         </div>
       </div>
 
@@ -274,7 +359,7 @@ export function AdminPortal({ onViewClassSeatMap, onLogout }: AdminPortalProps) 
         </div>
 
         {/* Right Column: Live Shift Roster */}
-        <div className="card" style={styles.cardSection}>
+        <div className="card admin-roster-card-responsive" style={styles.cardSection}>
           <div style={styles.cardHeader}>
             <h2 style={styles.cardTitle}>Live Class & Shift Roster</h2>
           </div>
@@ -291,6 +376,11 @@ export function AdminPortal({ onViewClassSeatMap, onLogout }: AdminPortalProps) 
             <div style={styles.classList}>
               {classes.map((cls) => {
                 const occupancy = cls.totalSeats > 0 ? Math.round(((cls.confirmedSeats + cls.heldSeats) / cls.totalSeats) * 100) : 0;
+                const currentSeats = editingSeats[cls.id] ?? cls.totalSeats;
+                const isModified = currentSeats !== cls.totalSeats;
+                const isSavingThis = savingClassId === cls.id;
+                const feedbackForThis = seatSaveFeedback?.classId === cls.id ? seatSaveFeedback : null;
+
                 return (
                   <div key={cls.id} style={styles.classItem}>
                     <div style={styles.classItemHeader}>
@@ -304,7 +394,7 @@ export function AdminPortal({ onViewClassSeatMap, onLogout }: AdminPortalProps) 
                         </div>
                       </div>
 
-                      <div style={{ display: 'flex', gap: '0.45rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                      <div style={styles.actionsCluster} className="class-actions-cluster-responsive">
                         <button
                           type="button"
                           onClick={() => setSelectedSectionClass(cls)}
@@ -313,15 +403,72 @@ export function AdminPortal({ onViewClassSeatMap, onLogout }: AdminPortalProps) 
                         >
                           Divide Sections
                         </button>
-                        {onViewClassSeatMap && (
+
+                        {/* Increase Seat + and Save Control */}
+                        <div style={styles.seatAdjustBox} className="seat-adjust-box-responsive">
                           <button
                             type="button"
-                            onClick={() => onViewClassSeatMap(cls.id)}
-                            className="btn btn-outline"
-                            style={styles.viewSeatMapBtn}
+                            onClick={() => handleAdjustSeat(cls.id, cls.totalSeats, cls.confirmedSeats, -1)}
+                            disabled={currentSeats <= cls.confirmedSeats || isSavingThis}
+                            style={styles.stepperMiniBtn}
+                            title="Decrease seat (-1)"
                           >
-                            Seat Map →
+                            –
                           </button>
+                          <input
+                            type="number"
+                            min={cls.confirmedSeats}
+                            value={currentSeats}
+                            onChange={(e) => handleSeatInputChange(cls.id, cls.confirmedSeats, parseInt(e.target.value) || 0)}
+                            style={styles.stepperNumberInput}
+                            title="Total capacity"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleAdjustSeat(cls.id, cls.totalSeats, cls.confirmedSeats, +1)}
+                            disabled={isSavingThis}
+                            style={styles.stepperMiniBtn}
+                            title="Increase seat (+1)"
+                          >
+                            +
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleAdjustSeat(cls.id, cls.totalSeats, cls.confirmedSeats, +10)}
+                            disabled={isSavingThis}
+                            style={{ ...styles.stepperMiniBtn, width: 'auto', padding: '0 5px', fontSize: '0.72rem', fontWeight: 700 }}
+                            title="Increase seat (+10)"
+                          >
+                            +10
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleSaveSeats(cls)}
+                            disabled={isSavingThis || !isModified}
+                            className="btn btn-primary"
+                            style={{
+                              ...styles.saveSeatsBtn,
+                              background: isModified ? 'var(--primary)' : 'var(--slate-200)',
+                              color: isModified ? '#ffffff' : 'var(--slate-500)',
+                              borderColor: isModified ? 'var(--primary)' : 'var(--slate-300)',
+                              cursor: isModified ? 'pointer' : 'default',
+                            }}
+                          >
+                            {isSavingThis ? '...' : 'Save'}
+                          </button>
+                        </div>
+
+                        {feedbackForThis && (
+                          <span
+                            style={{
+                              fontSize: '0.75rem',
+                              fontWeight: 700,
+                              color: feedbackForThis.success ? 'var(--success-dark)' : 'var(--danger-dark)',
+                              marginLeft: 4,
+                            }}
+                          >
+                            {feedbackForThis.msg}
+                          </span>
                         )}
                       </div>
                     </div>
@@ -330,13 +477,13 @@ export function AdminPortal({ onViewClassSeatMap, onLogout }: AdminPortalProps) 
                     <div style={styles.progressBar}>
                       <div
                         style={{
-                          width: `${(cls.confirmedSeats / cls.totalSeats) * 100}%`,
+                          width: ((cls.confirmedSeats / cls.totalSeats) * 100) + '%',
                           background: 'var(--success-dark)',
                         }}
                       />
                       <div
                         style={{
-                          width: `${(cls.heldSeats / cls.totalSeats) * 100}%`,
+                          width: ((cls.heldSeats / cls.totalSeats) * 100) + '%',
                           background: 'var(--warning)',
                         }}
                       />
@@ -374,7 +521,7 @@ const styles: Record<string, React.CSSProperties> = {
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     gap: '1.5rem',
-    marginBottom: '2rem',
+    marginBottom: '1.5rem',
     flexWrap: 'wrap',
   },
   title: {
@@ -389,30 +536,67 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: '0.85rem',
     color: 'var(--slate-600)',
   },
-  metricsGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-    gap: '1rem',
-    marginBottom: '2rem',
-  },
-  metricCard: {
-    padding: '1.25rem',
+  overviewCard: {
+    padding: '0.85rem 1.25rem',
+    marginBottom: '1.75rem',
+    background: '#ffffff',
+    border: '1px solid var(--slate-200)',
+    borderRadius: 'var(--radius-lg)',
     display: 'flex',
     flexDirection: 'column',
-    gap: '0.25rem',
+    gap: '0.75rem',
+    boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
+  },
+  metricsRow: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: '1rem',
+    flexWrap: 'wrap',
+  },
+  metricItem: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '0.15rem',
+    flex: '1 1 auto',
+  },
+  metricDivider: {
+    width: 1,
+    height: 32,
+    background: 'var(--slate-200)',
   },
   metricLabel: {
-    fontSize: '0.75rem',
+    fontSize: '0.675rem',
     fontWeight: 700,
     textTransform: 'uppercase',
     color: 'var(--slate-500)',
-    letterSpacing: '0.4px',
+    letterSpacing: '0.5px',
   },
   metricVal: {
-    fontSize: '1.75rem',
+    fontSize: '1.35rem',
     fontWeight: 800,
     fontFamily: 'var(--font-mono)',
     color: 'var(--slate-900)',
+    lineHeight: 1.1,
+  },
+  globalProgressWrapper: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '0.35rem',
+  },
+  globalProgressBar: {
+    height: 5,
+    borderRadius: 'var(--radius-full)',
+    background: 'var(--slate-100)',
+    display: 'flex',
+    overflow: 'hidden',
+  },
+  globalProgressLabels: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    fontSize: '0.7rem',
+    fontWeight: 600,
+    color: 'var(--slate-500)',
   },
   mainGrid: {
     display: 'grid',
@@ -598,6 +782,12 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: 'var(--radius-full)',
     border: '1px solid var(--slate-200)',
   },
+  actionsCluster: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.5rem',
+    flexWrap: 'wrap',
+  },
   divideSectionsBtn: {
     padding: '0.45rem 0.85rem',
     fontSize: '0.8rem',
@@ -606,10 +796,57 @@ const styles: Record<string, React.CSSProperties> = {
     whiteSpace: 'nowrap',
     cursor: 'pointer',
   },
-  viewSeatMapBtn: {
+  seatAdjustBox: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    background: '#ffffff',
+    border: '1px solid var(--slate-300)',
+    borderRadius: 'var(--radius-md)',
+    padding: '2px',
+    gap: '3px',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+  },
+  stepperMiniBtn: {
+    width: 26,
+    height: 28,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    background: 'var(--slate-100)',
+    border: 'none',
+    borderRadius: 'var(--radius-sm)',
+    color: 'var(--slate-700)',
+    fontWeight: 700,
+    fontSize: '0.9rem',
+    cursor: 'pointer',
+    userSelect: 'none',
+    transition: 'background 0.15s ease',
+  },
+  stepperNumberInput: {
+    width: 48,
+    height: 28,
+    textAlign: 'center',
+    border: 'none',
+    background: 'transparent',
+    fontWeight: 800,
+    fontFamily: 'var(--font-mono)',
+    fontSize: '0.85rem',
+    color: 'var(--slate-900)',
+    outline: 'none',
+    padding: 0,
+  },
+  saveSeatsBtn: {
+    padding: '0.3rem 0.65rem',
     fontSize: '0.75rem',
-    padding: '0.3rem 0.75rem',
+    fontWeight: 700,
+    borderRadius: 'var(--radius-sm)',
+    border: '1px solid transparent',
     whiteSpace: 'nowrap',
+    transition: 'all 0.15s ease',
+    height: 28,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   progressBar: {
     height: 6,

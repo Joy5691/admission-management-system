@@ -13,6 +13,8 @@ public static class ClassesEndpoints
         app.MapPost("/classes", CreateClass);
         app.MapGet("/classes", GetAllClasses);
         app.MapGet("/classes/{classId:guid}", GetClassById);
+        app.MapPatch("/classes/{classId:guid}/seats", UpdateClassSeats);
+        app.MapPut("/classes/{classId:guid}/seats", UpdateClassSeats);
         app.MapGet("/classes/{classId:guid}/confirmed-students", GetConfirmedStudents);
         app.MapGet("/classes/{classId:guid}/sections", GetClassSections);
         app.MapPost("/classes/{classId:guid}/sections", SaveClassSections);
@@ -139,6 +141,78 @@ public static class ClassesEndpoints
                 heldSeats = held,
                 confirmedSeats = confirmed,
                 availableSeats = cls.TotalSeats - held - confirmed
+            });
+        }
+        finally
+        {
+            await conn.CloseAsync();
+        }
+    }
+
+
+    // PATCH /classes/{classId}/seats → 200 { id, name, totalSeats, heldSeats, confirmedSeats, availableSeats }
+    private static async Task<IResult> UpdateClassSeats(
+        Guid classId,
+        [FromBody] UpdateClassSeatsRequest req,
+        AppDbContext db)
+    {
+        if (req.TotalSeats <= 0)
+            return Results.Json(
+                new { error = new { code = "INVALID_SEATS", message = "Total seats must be greater than 0." } },
+                statusCode: 400);
+
+        var cls = await db.Classes.FindAsync(classId);
+        if (cls is null)
+            return Results.Json(
+                new { error = new { code = "CLASS_NOT_FOUND", message = "Class not found." } },
+                statusCode: 404);
+
+        var conn = (NpgsqlConnection)db.Database.GetDbConnection();
+        await conn.OpenAsync();
+        try
+        {
+            int held = 0;
+            int confirmed = 0;
+            await using (var cmd = new NpgsqlCommand(@"
+                SELECT
+                    COUNT(*) FILTER (WHERE status='HELD' AND expires_at > now())::int AS held,
+                    COUNT(*) FILTER (WHERE status='CONFIRMED')::int AS confirmed
+                FROM holds
+                WHERE class_id = @classId", conn))
+            {
+                cmd.Parameters.AddWithValue("classId", classId);
+                await using var reader = await cmd.ExecuteReaderAsync();
+                if (await reader.ReadAsync())
+                {
+                    held = reader.GetInt32(0);
+                    confirmed = reader.GetInt32(1);
+                }
+            }
+
+            if (req.TotalSeats < confirmed)
+            {
+                return Results.Json(
+                    new { error = new { code = "SEATS_BELOW_CONFIRMED", message = $"Cannot decrease total seats below currently confirmed students ({confirmed})." } },
+                    statusCode: 400);
+            }
+
+            await using (var updateCmd = new NpgsqlCommand(@"UPDATE classes SET total_seats = @seats WHERE id = @classId", conn))
+            {
+                updateCmd.Parameters.AddWithValue("seats", req.TotalSeats);
+                updateCmd.Parameters.AddWithValue("classId", classId);
+                await updateCmd.ExecuteNonQueryAsync();
+            }
+
+            cls.TotalSeats = req.TotalSeats;
+
+            return Results.Ok(new
+            {
+                id = cls.Id,
+                name = cls.Name,
+                totalSeats = cls.TotalSeats,
+                heldSeats = held,
+                confirmedSeats = confirmed,
+                availableSeats = Math.Max(0, cls.TotalSeats - held - confirmed)
             });
         }
         finally
@@ -298,3 +372,5 @@ public static class ClassesEndpoints
 public record SaveSectionsRequest(int SectionSize, object Sections);
 
 public record CreateClassRequest(string Name, int TotalSeats);
+
+public record UpdateClassSeatsRequest(int TotalSeats);

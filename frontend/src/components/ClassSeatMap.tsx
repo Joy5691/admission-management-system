@@ -555,7 +555,8 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     flexDirection: 'column',
     gap: '0.2rem',
-    flex: '1 1 240px',
+    flex: '1 1 auto',
+    minWidth: 0,
   },
   classLevelBadge: {
     fontSize: '0.725rem',
