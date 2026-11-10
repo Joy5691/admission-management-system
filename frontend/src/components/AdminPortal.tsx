@@ -35,7 +35,6 @@ interface AdminPortalProps {
 export function AdminPortal({ onViewClassSeatMap, onLogout }: AdminPortalProps) {
   const [classes, setClasses] = useState<ClassInfo[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Form State
   const [selectedClassLevel, setSelectedClassLevel] = useState('Class 6');
@@ -56,7 +55,6 @@ export function AdminPortal({ onViewClassSeatMap, onLogout }: AdminPortalProps) 
   // Fetch classes
   const loadClasses = async (isInitial = false) => {
     if (isInitial) setLoading(true);
-    else setIsRefreshing(true);
     try {
       const data = await apiFetch('/classes');
       setClasses(data);
@@ -64,7 +62,6 @@ export function AdminPortal({ onViewClassSeatMap, onLogout }: AdminPortalProps) 
       // ignore poll errors
     } finally {
       if (isInitial) setLoading(false);
-      else setIsRefreshing(false);
     }
   };
 
@@ -110,24 +107,13 @@ export function AdminPortal({ onViewClassSeatMap, onLogout }: AdminPortalProps) 
   const totalHeld = classes.reduce((sum, c) => sum + c.heldSeats, 0);
   const totalConfirmed = classes.reduce((sum, c) => sum + c.confirmedSeats, 0);
   const totalAvailable = classes.reduce((sum, c) => sum + c.availableSeats, 0);
-  const overallOccupancy = totalCapacity > 0 ? Math.round(((totalConfirmed + totalHeld) / totalCapacity) * 100) : 0;
 
   return (
     <div style={styles.container} className="animate-fade-in">
       {/* Top Banner */}
       <div style={styles.topHeader}>
         <div>
-          <div style={styles.adminBadgeRow}>
-            <span style={styles.adminBadge}>Administrative Control Center</span>
-            <span style={styles.liveIndicator}>
-              <span style={{ ...styles.liveDot, opacity: isRefreshing ? 0.3 : 1 }} />
-              Live Sync Active
-            </span>
-          </div>
           <h1 style={styles.title}>Admin Admission & Shift Management</h1>
-          <p style={styles.subtitle}>
-            Create new academic classes and shifts, monitor concurrent seat holds, and supervise live admissions in real-time.
-          </p>
         </div>
 
         <button onClick={onLogout} className="btn btn-outline" style={styles.logoutBtn} type="button">
@@ -140,27 +126,22 @@ export function AdminPortal({ onViewClassSeatMap, onLogout }: AdminPortalProps) 
         <div className="card" style={styles.metricCard}>
           <span style={styles.metricLabel}>Total Classes</span>
           <span style={styles.metricVal}>{classes.length}</span>
-          <span style={styles.metricSub}>Active academic shifts</span>
         </div>
         <div className="card" style={styles.metricCard}>
-          <span style={styles.metricLabel}>Total School Capacity</span>
-          <span style={{ ...styles.metricVal, color: 'var(--primary)' }}>{totalCapacity}</span>
-          <span style={styles.metricSub}>Total available seats</span>
+          <span style={styles.metricLabel}>Total Capacity</span>
+          <span style={styles.metricVal}>{totalCapacity}</span>
         </div>
-        <div className="card" style={styles.metricCard}>
-          <span style={styles.metricLabel}>Active Holds</span>
+        <div className="card" style={{ ...styles.metricCard, background: '#ebf4fc', borderColor: '#bcd9f5' }}>
+          <span style={{ ...styles.metricLabel, color: 'var(--primary)' }}>Available Seats</span>
+          <span style={{ ...styles.metricVal, color: 'var(--primary)' }}>{totalAvailable}</span>
+        </div>
+        <div className="card" style={{ ...styles.metricCard, background: '#fffbeb', borderColor: '#fde68a' }}>
+          <span style={{ ...styles.metricLabel, color: 'var(--warning-dark)' }}>Held</span>
           <span style={{ ...styles.metricVal, color: 'var(--warning-dark)' }}>{totalHeld}</span>
-          <span style={styles.metricSub}>In payment countdown</span>
         </div>
-        <div className="card" style={styles.metricCard}>
-          <span style={styles.metricLabel}>Confirmed Students</span>
+        <div className="card" style={{ ...styles.metricCard, background: '#ecfdf5', borderColor: '#a7f3d0' }}>
+          <span style={{ ...styles.metricLabel, color: 'var(--success-dark)' }}>Confirmed</span>
           <span style={{ ...styles.metricVal, color: 'var(--success-dark)' }}>{totalConfirmed}</span>
-          <span style={styles.metricSub}>Admission fee paid</span>
-        </div>
-        <div className="card" style={styles.metricCard}>
-          <span style={styles.metricLabel}>Overall Occupancy</span>
-          <span style={{ ...styles.metricVal, color: 'var(--slate-800)' }}>{overallOccupancy}%</span>
-          <span style={styles.metricSub}>{totalAvailable} seats open</span>
         </div>
       </div>
 
@@ -169,11 +150,7 @@ export function AdminPortal({ onViewClassSeatMap, onLogout }: AdminPortalProps) 
         {/* Left Column: Create Class & Shift Form */}
         <div className="card" style={styles.cardSection}>
           <div style={styles.cardHeader}>
-            
-            <div>
-              <h2 style={styles.cardTitle}>Create Class & Shift</h2>
-              <p style={styles.cardSub}>Select the class level and shift from dropdowns to configure admission seats</p>
-            </div>
+            <h2 style={styles.cardTitle}>Create Class & Shift</h2>
           </div>
 
           {feedback && (
@@ -297,11 +274,7 @@ export function AdminPortal({ onViewClassSeatMap, onLogout }: AdminPortalProps) 
         {/* Right Column: Live Shift Roster */}
         <div className="card" style={styles.cardSection}>
           <div style={styles.cardHeader}>
-            
-            <div>
-              <h2 style={styles.cardTitle}>Live Class & Shift Roster</h2>
-              <p style={styles.cardSub}>Real-time seat distribution and student occupancy status</p>
-            </div>
+            <h2 style={styles.cardTitle}>Live Class & Shift Roster</h2>
           </div>
 
           {loading ? (
@@ -385,50 +358,12 @@ const styles: Record<string, React.CSSProperties> = {
     marginBottom: '2rem',
     flexWrap: 'wrap',
   },
-  adminBadgeRow: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.75rem',
-    marginBottom: '0.5rem',
-  },
-  adminBadge: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: '0.35rem',
-    background: 'var(--primary-light)',
-    color: 'var(--primary-dark)',
-    border: '1px solid var(--primary-border)',
-    padding: '0.25rem 0.65rem',
-    borderRadius: 'var(--radius-full)',
-    fontSize: '0.75rem',
-    fontWeight: 700,
-  },
-  liveIndicator: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: '0.35rem',
-    fontSize: '0.75rem',
-    color: 'var(--slate-500)',
-    fontFamily: 'var(--font-mono)',
-  },
-  liveDot: {
-    width: 7,
-    height: 7,
-    borderRadius: '50%',
-    background: 'var(--success)',
-    transition: 'opacity 0.2s ease',
-  },
   title: {
     fontSize: '1.75rem',
     fontWeight: 800,
     color: 'var(--slate-900)',
     letterSpacing: '-0.02em',
     marginBottom: '0.4rem',
-  },
-  subtitle: {
-    fontSize: '0.95rem',
-    color: 'var(--slate-500)',
-    maxWidth: 680,
   },
   logoutBtn: {
     padding: '0.5rem 1rem',
@@ -460,10 +395,6 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: 'var(--font-mono)',
     color: 'var(--slate-900)',
   },
-  metricSub: {
-    fontSize: '0.75rem',
-    color: 'var(--slate-400)',
-  },
   mainGrid: {
     display: 'grid',
     gridTemplateColumns: 'minmax(320px, 450px) 1fr',
@@ -485,11 +416,6 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: '1.2rem',
     fontWeight: 800,
     color: 'var(--slate-900)',
-    margin: 0,
-  },
-  cardSub: {
-    fontSize: '0.8rem',
-    color: 'var(--slate-500)',
     margin: 0,
   },
   feedbackAlert: {

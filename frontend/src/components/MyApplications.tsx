@@ -368,6 +368,11 @@ export function MyApplications({ studentId, lang = 'en', onViewHold, onGoToClass
           }}
           className={selectedSlipHold.className}
           studentId={studentId}
+          studentName={
+            localStorage.getItem('studentName_' + selectedSlipHold.holdId) ||
+            localStorage.getItem('studentName_default') ||
+            ''
+          }
           lang={lang}
           onClose={() => setSelectedSlipHold(null)}
         />

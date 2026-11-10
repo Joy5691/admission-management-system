@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom';
 import React, { useState, useEffect } from 'react';
 import { apiFetch, friendlyError } from '../api/client';
 import { ClassInfo, MyHold } from '../types';
@@ -363,7 +364,7 @@ export function ClassSeatMap({
       </div>
 
       {/* Apply Modal */}
-      {applyModalSeat && (
+      {applyModalSeat && createPortal(
         <div className="modal-backdrop" onClick={() => setApplyModalSeat(null)}>
           <div className="modal-dialog animate-slide-up" onClick={e => e.stopPropagation()}>
             <div style={styles.modalHeader}>
@@ -440,11 +441,12 @@ export function ClassSeatMap({
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Held Seat Recovery Modal */}
-      {heldSeatModalNumber && (
+      {heldSeatModalNumber && createPortal(
         <div className="modal-backdrop" onClick={() => setHeldSeatModalNumber(null)}>
           <div className="modal-dialog animate-slide-up" onClick={e => e.stopPropagation()}>
             <div style={styles.modalHeader}>
@@ -517,7 +519,8 @@ export function ClassSeatMap({
               </form>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

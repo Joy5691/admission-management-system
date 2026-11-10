@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 
 interface AdminLoginModalProps {
   isOpen: boolean;
@@ -32,7 +33,7 @@ export function AdminLoginModal({ isOpen, onClose, onLoginSuccess }: AdminLoginM
     onClose();
   };
 
-  return (
+  return createPortal(
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal-dialog animate-slide-up" onClick={(e) => e.stopPropagation()}>
         {/* Modal Header */}
@@ -111,7 +112,8 @@ export function AdminLoginModal({ isOpen, onClose, onLoginSuccess }: AdminLoginM
           </form>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

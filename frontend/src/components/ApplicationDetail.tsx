@@ -86,6 +86,35 @@ export function ApplicationDetail({ holdId, studentId, lang = 'en', onBack }: Pr
   const [remainingSec, setRemainingSec] = useState<number | null>(null);
   const chimePlayedRef = useRef(false);
 
+  // Student Full Name State
+  const studentNameKey = 'studentName_' + holdId;
+  const [studentName, setStudentName] = useState<string>(() => {
+    return localStorage.getItem('studentName_' + holdId) || localStorage.getItem('studentName_default') || '';
+  });
+  const [studentNameInput, setStudentNameInput] = useState('');
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [nameSavedFeedback, setNameSavedFeedback] = useState(false);
+
+  useEffect(() => {
+    const saved = localStorage.getItem(studentNameKey) || localStorage.getItem('studentName_default') || '';
+    if (saved) {
+      setStudentName(saved);
+      setStudentNameInput(saved);
+    }
+  }, [studentNameKey]);
+
+  const handleSaveStudentName = (nameToSave?: string) => {
+    const val = (nameToSave !== undefined ? nameToSave : studentNameInput).trim();
+    if (!val) return;
+    setStudentName(val);
+    setStudentNameInput(val);
+    setIsEditingName(false);
+    localStorage.setItem(studentNameKey, val);
+    localStorage.setItem('studentName_default', val);
+    setNameSavedFeedback(true);
+    setTimeout(() => setNameSavedFeedback(false), 2500);
+  };
+
   const fetchHold = useCallback(async () => {
     try {
       const data: Hold & { className?: string } = await apiFetch(`/holds/${holdId}`, {
@@ -330,6 +359,80 @@ export function ApplicationDetail({ holdId, studentId, lang = 'en', onBack }: Pr
               )}
             </div>
 
+            {/* If Confirmed: Student Full Name Entry */}
+            {effectiveStatus === 'CONFIRMED' && (
+              <div style={styles.nameEntryCard}>
+                <div style={styles.nameEntryHeader}>
+                  <div>
+                    <h3 style={styles.nameEntryTitle}>{t.studentNameLabel}</h3>
+                    <p style={styles.nameEntrySub}>
+                      {lang === 'bn'
+                        ? 'ভর্তি রশিদ ও স্কুল রেজিস্ট্রেশন রেকর্ডের জন্য শিক্ষার্থীর নাম প্রদান করুন।'
+                        : 'Provide the student full name for the official admission confirmation slip.'}
+                    </p>
+                  </div>
+                  {studentName && !isEditingName && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setStudentNameInput(studentName);
+                        setIsEditingName(true);
+                      }}
+                      className="btn btn-outline"
+                      style={styles.editNameBtnSmall}
+                    >
+                      ✎ {t.editStudentNameBtn}
+                    </button>
+                  )}
+                </div>
+
+                {(!studentName || isEditingName) ? (
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      handleSaveStudentName();
+                    }}
+                    style={styles.nameFormRow}
+                  >
+                    <input
+                      type="text"
+                      value={studentNameInput}
+                      onChange={(e) => setStudentNameInput(e.target.value)}
+                      placeholder={t.enterStudentNamePrompt}
+                      style={styles.studentNameInput}
+                      autoFocus
+                    />
+                    <button
+                      type="submit"
+                      disabled={!studentNameInput.trim()}
+                      className="btn btn-primary"
+                      style={styles.saveNameBtnMain}
+                    >
+                      {t.saveStudentNameBtn}
+                    </button>
+                    {isEditingName && studentName && (
+                      <button
+                        type="button"
+                        onClick={() => setIsEditingName(false)}
+                        className="btn btn-outline"
+                        style={styles.cancelNameBtn}
+                      >
+                        {t.cancelBtn}
+                      </button>
+                    )}
+                  </form>
+                ) : (
+                  <div style={styles.savedNameDisplay}>
+                    <span style={styles.savedNamePrefix}>{lang === 'bn' ? 'শিক্ষার্থীর নাম: ' : 'Admitted Student: '}</span>
+                    <strong style={styles.savedNameText}>{studentName}</strong>
+                    {nameSavedFeedback && (
+                      <span style={styles.savedPillBadge}>✓ {t.nameSavedSuccess}</span>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* If Confirmed: Official Slip Trigger */}
             {effectiveStatus === 'CONFIRMED' && (
               <div style={styles.confirmedActionCard}>
@@ -480,6 +583,8 @@ export function ApplicationDetail({ holdId, studentId, lang = 'en', onBack }: Pr
           hold={hold}
           className={className}
           studentId={studentId}
+          studentName={studentName}
+          onSaveStudentName={handleSaveStudentName}
           lang={lang}
           onClose={() => setShowSlip(false)}
         />
