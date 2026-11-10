@@ -1,11 +1,12 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 interface Props {
   expiresAt: string;
   onExpired?: () => void;
+  onSecondsChange?: (sec: number) => void;
 }
 
-export function CountdownTimer({ expiresAt, onExpired }: Props) {
+export function CountdownTimer({ expiresAt, onExpired, onSecondsChange }: Props) {
   const getSecondsLeft = () => {
     const diff = new Date(expiresAt).getTime() - Date.now();
     return Math.max(0, Math.floor(diff / 1000));
@@ -15,11 +16,14 @@ export function CountdownTimer({ expiresAt, onExpired }: Props) {
   const [fired, setFired] = useState(false);
 
   useEffect(() => {
-    setSeconds(getSecondsLeft());
+    const sec = getSecondsLeft();
+    setSeconds(sec);
+    onSecondsChange?.(sec);
     setFired(false);
   }, [expiresAt]);
 
   useEffect(() => {
+    onSecondsChange?.(seconds);
     if (seconds <= 0) {
       if (!fired) {
         setFired(true);
@@ -27,9 +31,13 @@ export function CountdownTimer({ expiresAt, onExpired }: Props) {
       }
       return;
     }
-    const id = setTimeout(() => setSeconds(getSecondsLeft()), 1000);
+    const id = setTimeout(() => {
+      const nextSec = getSecondsLeft();
+      setSeconds(nextSec);
+      onSecondsChange?.(nextSec);
+    }, 1000);
     return () => clearTimeout(id);
-  }, [seconds, fired, expiresAt, onExpired]);
+  }, [seconds, fired, expiresAt, onExpired, onSecondsChange]);
 
   if (seconds <= 0) {
     return (
@@ -98,20 +106,19 @@ const styles: Record<string, React.CSSProperties> = {
     lineHeight: 1,
   },
   label: {
-    fontSize: '0.75rem',
+    fontSize: '0.8rem',
     fontWeight: 600,
     textTransform: 'uppercase',
     letterSpacing: '0.5px',
-    opacity: 0.85,
   },
   expiredWrapper: {
     display: 'inline-flex',
     alignItems: 'center',
     gap: '0.4rem',
     padding: '0.35rem 0.75rem',
+    borderRadius: 'var(--radius-full)',
     background: 'var(--danger-light)',
     border: '1px solid var(--danger-border)',
-    borderRadius: 'var(--radius-full)',
   },
   expiredDot: {
     width: 8,
@@ -120,11 +127,9 @@ const styles: Record<string, React.CSSProperties> = {
     background: 'var(--danger)',
   },
   expiredText: {
-    color: 'var(--danger)',
-    fontWeight: 700,
-    fontFamily: 'var(--font-mono)',
+    color: 'var(--danger-dark)',
     fontSize: '0.85rem',
+    fontWeight: 700,
     textTransform: 'uppercase',
-    letterSpacing: '0.5px',
   },
 };

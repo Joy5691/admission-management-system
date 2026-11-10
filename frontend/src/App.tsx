@@ -3,6 +3,7 @@ import { ClassList } from './components/ClassList';
 import { ApplicationDetail } from './components/ApplicationDetail';
 import { MyApplications } from './components/MyApplications';
 import { AdminPortal } from './components/AdminPortal';
+import { SupportWidget } from './components/SupportWidget';
 import { AdminLoginModal } from './components/AdminLoginModal';
 import { ErrorBoundary } from './ErrorBoundary';
 import { Language, translations } from './i18n';
@@ -280,6 +281,9 @@ function App() {
           </div>
         </div>
       </footer>
+
+      {/* Floating Support & Helpline Widget */}
+      <SupportWidget lang={lang} />
     </div>
   );
 }

@@ -30,11 +30,15 @@ export function ClassSeatMap({
   // User's active hold in this class
   const [userActiveHold, setUserActiveHold] = useState<MyHold | null>(null);
 
+  // Saved student ID from localStorage
+  const [savedId, setSavedId] = useState<string>(() => localStorage.getItem('studentId') || '');
+  const [rememberDevice, setRememberDevice] = useState<boolean>(() => localStorage.getItem('rememberStudentId') === 'true');
+
   // Modals
   const [applyModalSeat, setApplyModalSeat] = useState<number | null>(null);
-  const [modalStudentId, setModalStudentId] = useState(studentId);
+  const [modalStudentId, setModalStudentId] = useState(studentId || savedId);
   const [heldSeatModalNumber, setHeldSeatModalNumber] = useState<number | null>(null);
-  const [heldModalInputId, setHeldModalInputId] = useState(studentId);
+  const [heldModalInputId, setHeldModalInputId] = useState(studentId || savedId);
   const [heldModalError, setHeldModalError] = useState<string | null>(null);
   const [heldModalChecking, setHeldModalChecking] = useState(false);
 
@@ -74,10 +78,16 @@ export function ClassSeatMap({
 
   // Execute hold API
   const submitHold = async (targetStudentId: string, _seatNum?: number) => {
-    const cleanId = targetStudentId.trim();
+    const cleanId = targetStudentId.replace(/\D/g, '').slice(0, 17);
     if (cleanId.length !== 17 || !/^\d{17}$/.test(cleanId)) {
-      setError('Student ID must be exactly 17 digits.');
+      setError(lang === 'bn' ? 'শিক্ষার্থী জন্ম নিবন্ধন নম্বর অবশ্যই ১৭ ডিজিট হতে হবে।' : 'Student ID must be exactly 17 digits.');
       return;
+    }
+
+    if (rememberDevice) {
+      localStorage.setItem('studentId', cleanId);
+      localStorage.setItem('rememberStudentId', 'true');
+      setSavedId(cleanId);
     }
 
     setApplying(true);
@@ -100,6 +110,24 @@ export function ClassSeatMap({
     }
   };
 
+  // Auto-Assign Best Available Seat
+  const handleAutoAssign = () => {
+    const firstAvail = seats.find(s => s.status === 'AVAILABLE');
+    if (!firstAvail) {
+      setError(lang === 'bn' ? 'এই শ্রেণিতে কোনো আসন খালি নেই।' : 'No seats are currently available in this class.');
+      return;
+    }
+
+    if (studentId.trim().length === 17) {
+      submitHold(studentId, firstAvail.seatNum);
+    } else if (savedId && savedId.length === 17) {
+      submitHold(savedId, firstAvail.seatNum);
+    } else {
+      setApplyModalSeat(firstAvail.seatNum);
+      setModalStudentId(savedId || '');
+    }
+  };
+
   // Click on a seat
   const handleSeatClick = (seatIndex: number, status: 'AVAILABLE' | 'HELD' | 'CONFIRMED', isUserHeld: boolean) => {
     setError(null);
@@ -109,13 +137,13 @@ export function ClassSeatMap({
     }
 
     if (status === 'CONFIRMED') {
-      setError(`Seat #${seatIndex} is confirmed and already admitted.`);
+      setError(lang === 'bn' ? `আসন #${seatIndex} ইতিমধ্যে নিশ্চিত ও ভর্তি সম্পন্ন।` : `Seat #${seatIndex} is confirmed and already admitted.`);
       return;
     }
 
     if (status === 'HELD') {
       setHeldSeatModalNumber(seatIndex);
-      setHeldModalInputId(studentId || '');
+      setHeldModalInputId(studentId || savedId || '');
       setHeldModalError(null);
       return;
     }
@@ -123,19 +151,27 @@ export function ClassSeatMap({
     // Available seat
     if (studentId.trim().length === 17) {
       submitHold(studentId, seatIndex);
+    } else if (savedId && savedId.length === 17) {
+      submitHold(savedId, seatIndex);
     } else {
       setApplyModalSeat(seatIndex);
-      setModalStudentId(studentId);
+      setModalStudentId(savedId || '');
     }
   };
 
   // Recover held seat
   const handleVerifyHeldSeat = async (e: React.FormEvent) => {
     e.preventDefault();
-    const cleanId = heldModalInputId.trim();
+    const cleanId = heldModalInputId.replace(/\D/g, '').slice(0, 17);
     if (cleanId.length !== 17 || !/^\d{17}$/.test(cleanId)) {
-      setHeldModalError('Please enter a valid 17-digit Birth Registration Number.');
+      setHeldModalError(lang === 'bn' ? 'অনুগ্রহ করে সঠিক ১৭ ডিজিটের জন্ম নিবন্ধন নম্বর দিন।' : 'Please enter a valid 17-digit Birth Registration Number.');
       return;
+    }
+
+    if (rememberDevice) {
+      localStorage.setItem('studentId', cleanId);
+      localStorage.setItem('rememberStudentId', 'true');
+      setSavedId(cleanId);
     }
 
     setHeldModalChecking(true);
@@ -150,7 +186,7 @@ export function ClassSeatMap({
         setHeldSeatModalNumber(null);
         onViewHold(activeMatch.holdId);
       } else {
-        setHeldModalError(`No active reservation found for ID ${cleanId} in this class.`);
+        setHeldModalError(lang === 'bn' ? `আইডি ${cleanId}-এর জন্য কোনো সক্রিয় হোল্ড পাওয়া যায়নি।` : `No active reservation found for ID ${cleanId} in this class.`);
       }
     } catch (err: any) {
       setHeldModalError(friendlyError(err));
@@ -159,44 +195,73 @@ export function ClassSeatMap({
     }
   };
 
-  // Generate seat map
-  const { totalSeats, confirmedSeats, heldSeats, availableSeats } = currentClass;
+  // Build seat grid
+  const totalSeats = currentClass.totalSeats;
+  const availableSeats = currentClass.availableSeats;
+  const heldSeats = currentClass.heldSeats;
+  const confirmedSeats = currentClass.confirmedSeats;
 
   const seats = Array.from({ length: totalSeats }, (_, i) => {
     const seatNum = i + 1;
     let status: 'AVAILABLE' | 'HELD' | 'CONFIRMED' = 'AVAILABLE';
-    if (seatNum <= confirmedSeats) {
+    let isUserHeld = false;
+
+    if (userActiveHold && (userActiveHold.seatNumber === seatNum || (!userActiveHold.seatNumber && seatNum === 1))) {
+      status = 'HELD';
+      isUserHeld = true;
+    } else if (seatNum <= confirmedSeats) {
       status = 'CONFIRMED';
     } else if (seatNum <= confirmedSeats + heldSeats) {
       status = 'HELD';
-    } else {
-      status = 'AVAILABLE';
     }
 
-    const isUserHeld = Boolean(userActiveHold && status === 'HELD' && seatNum === confirmedSeats + 1);
     return { seatNum, status, isUserHeld };
   });
 
+  const formatDisplayId = (val: string) => {
+    const clean = val.replace(/\D/g, '').slice(0, 17);
+    if (clean.length <= 4) return clean;
+    if (clean.length <= 8) return `${clean.slice(0, 4)}-${clean.slice(4)}`;
+    if (clean.length <= 12) return `${clean.slice(0, 4)}-${clean.slice(4, 8)}-${clean.slice(8)}`;
+    return `${clean.slice(0, 4)}-${clean.slice(4, 8)}-${clean.slice(8, 12)}-${clean.slice(12)}`;
+  };
+
+  const rawApplyId = modalStudentId.replace(/\D/g, '').slice(0, 17);
+  const rawHeldId = heldModalInputId.replace(/\D/g, '').slice(0, 17);
+
   return (
-    <div style={styles.container} className="animate-fade-in">
-      {/* Top Navigation */}
-      <div style={styles.topNav}>
-        <button onClick={onBack} className="btn btn-outline" style={styles.backBtn} type="button">
-          {t.backToClasses}
-        </button>
+    <div style={styles.container} className="animate-fade-in seat-map-container">
+      {/* 3-Step Progress Stepper */}
+      <div className="admission-stepper">
+        <div className="stepper-step active">
+          <span className="stepper-bubble">1</span>
+          <span>{t.step1Title}</span>
+        </div>
+        <div className="stepper-connector" />
+        <div className="stepper-step">
+          <span className="stepper-bubble">2</span>
+          <span>{t.step2Title}</span>
+        </div>
+        <div className="stepper-connector" />
+        <div className="stepper-step">
+          <span className="stepper-bubble">3</span>
+          <span>{t.step3Title}</span>
+        </div>
       </div>
 
-      {/* Class Hero Banner */}
+      {/* Top Header Card */}
       <div className="card" style={styles.heroCard}>
-        <div style={styles.heroContent}>
-          <div>
-            <div style={styles.shiftBadgeRow}>
-              <span style={styles.classLevelBadge}>{t.academicClass}</span>
-            </div>
+        <div style={styles.heroTopRow}>
+          <button onClick={onBack} className="btn btn-outline" style={styles.backBtn} type="button">
+            {t.backToClasses}
+          </button>
+
+          <div style={styles.heroTitles}>
+            <span style={styles.classLevelBadge}>{t.academicClass}</span>
             <h1 style={styles.heroTitle}>{currentClass.name}</h1>
           </div>
 
-          <div style={styles.heroRight}>
+          <div style={styles.heroActionGroup}>
             {userActiveHold ? (
               <div style={styles.userHoldBanner}>
                 <span style={styles.userHoldTitle}>{t.yourSeatReserved}</span>
@@ -205,7 +270,7 @@ export function ClassSeatMap({
                   type="button"
                   onClick={() => onViewHold(userActiveHold.holdId)}
                   className="btn btn-success"
-                  style={{ width: '100%', marginTop: '0.5rem', fontSize: '0.85rem' }}
+                  style={{ width: '100%', marginTop: '0.4rem', fontSize: '0.85rem' }}
                 >
                   {t.resumePaymentNow}
                 </button>
@@ -213,15 +278,16 @@ export function ClassSeatMap({
             ) : (
               <button
                 type="button"
-                onClick={() => {
-                  if (studentId.trim().length === 17) submitHold(studentId);
-                  else setApplyModalSeat(1);
-                }}
+                onClick={handleAutoAssign}
                 disabled={availableSeats === 0 || applying}
                 className="btn btn-primary"
                 style={styles.heroApplyBtn}
+                title={t.autoAssignTooltip}
               >
-                {applying ? t.holdingSeat : availableSeats === 0 ? t.seatFull : t.applyForAvailableSeat}
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                  <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                </svg>
+                <span>{applying ? t.holdingSeat : availableSeats === 0 ? t.seatFull : t.autoAssignSeat}</span>
               </button>
             )}
           </div>
@@ -251,13 +317,13 @@ export function ClassSeatMap({
       {error && (
         <div style={styles.errorAlert} className="animate-fade-in">
           <span>{error}</span>
-          <button onClick={() => setError(null)} style={styles.alertClose}>Cancel</button>
+          <button onClick={() => setError(null)} style={styles.alertClose}>✕</button>
         </div>
       )}
 
-      {/* Classroom Visualization Card without blackboard */}
+      {/* Classroom Visualization Card */}
       <div className="card" style={styles.classroomCard}>
-        {/* Modern Clean Legend with Dots (No Emojis) */}
+        {/* Modern Clean Legend with Dots */}
         <div style={styles.legendRow}>
           <div style={styles.legendItem}>
             <span style={{ ...styles.legendDot, background: 'var(--primary)' }} />
@@ -309,22 +375,49 @@ export function ClassSeatMap({
             </div>
             <div style={styles.modalBody}>
               <p style={styles.modalDesc}>{t.reserveNotice}</p>
+
+              {savedId && savedId.length === 17 && rawApplyId !== savedId && (
+                <div style={{ marginBottom: '0.75rem' }}>
+                  <button
+                    type="button"
+                    onClick={() => setModalStudentId(savedId)}
+                    className="saved-id-chip"
+                  >
+                    <span>{t.savedIdBadge}:</span>
+                    <strong>{formatDisplayId(savedId)}</strong>
+                    <span style={{ textDecoration: 'underline', marginLeft: 4 }}>{t.useSavedId}</span>
+                  </button>
+                </div>
+              )}
+
               <div style={styles.field}>
                 <label style={styles.label}>{t.birthCertLabel}</label>
                 <input
                   type="text"
-                  maxLength={17}
-                  value={modalStudentId}
-                  onChange={e => setModalStudentId(e.target.value.replace(/\D/g, ''))}
-                  placeholder="20152691234567890"
+                  maxLength={23}
+                  value={formatDisplayId(modalStudentId)}
+                  onChange={e => setModalStudentId(e.target.value.replace(/\D/g, '').slice(0, 17))}
+                  placeholder="2015-2691-2345-67890"
+                  className="formatted-id-input"
                   style={styles.modalInput}
                   autoFocus
                 />
                 <div style={styles.digitHint}>
-                  <span>{modalStudentId.length} / 17 {t.digitsUnit}</span>
-                  {modalStudentId.length === 17 && <span style={{ color: 'var(--success-dark)' }}>{t.validIdBadge}</span>}
+                  <span>{rawApplyId.length} / 17 {t.digitsUnit}</span>
+                  {rawApplyId.length === 17 && <span style={{ color: 'var(--success-dark)', fontWeight: 700 }}>{t.validIdBadge}</span>}
                 </div>
               </div>
+
+              {/* Remember on device toggle */}
+              <label style={styles.checkboxLabel}>
+                <input
+                  type="checkbox"
+                  checked={rememberDevice}
+                  onChange={e => setRememberDevice(e.target.checked)}
+                  style={styles.checkbox}
+                />
+                <span>{t.rememberOnDevice}</span>
+              </label>
 
               <div style={styles.modalActions}>
                 <button
@@ -337,8 +430,8 @@ export function ClassSeatMap({
                 </button>
                 <button
                   type="button"
-                  disabled={modalStudentId.length !== 17 || applying}
-                  onClick={() => submitHold(modalStudentId, applyModalSeat)}
+                  disabled={rawApplyId.length !== 17 || applying}
+                  onClick={() => submitHold(rawApplyId, applyModalSeat)}
                   className="btn btn-primary"
                   style={{ flex: 2 }}
                 >
@@ -361,49 +454,68 @@ export function ClassSeatMap({
               </div>
               <button onClick={() => setHeldSeatModalNumber(null)} style={styles.modalClose}>✕</button>
             </div>
-
-            <form onSubmit={handleVerifyHeldSeat} style={styles.modalBody}>
+            <div style={styles.modalBody}>
               <p style={styles.modalDesc}>{t.heldSeatNotice}</p>
 
-              {heldModalError && (
-                <div style={styles.modalAlert}>{heldModalError}</div>
+              {savedId && savedId.length === 17 && rawHeldId !== savedId && (
+                <div style={{ marginBottom: '0.75rem' }}>
+                  <button
+                    type="button"
+                    onClick={() => setHeldModalInputId(savedId)}
+                    className="saved-id-chip"
+                  >
+                    <span>{t.savedIdBadge}:</span>
+                    <strong>{formatDisplayId(savedId)}</strong>
+                    <span style={{ textDecoration: 'underline', marginLeft: 4 }}>{t.useSavedId}</span>
+                  </button>
+                </div>
               )}
 
-              <div style={styles.field}>
-                <label style={styles.label}>{t.birthCertLabel}</label>
-                <input
-                  type="text"
-                  maxLength={17}
-                  value={heldModalInputId}
-                  onChange={e => setHeldModalInputId(e.target.value.replace(/\D/g, ''))}
-                  placeholder="20152691234567890"
-                  style={styles.modalInput}
-                  autoFocus
-                />
-                <div style={styles.digitHint}>
-                  <span>{heldModalInputId.length} / 17 {t.digitsUnit}</span>
+              <form onSubmit={handleVerifyHeldSeat}>
+                <div style={styles.field}>
+                  <label style={styles.label}>{t.birthCertLabel}</label>
+                  <input
+                    type="text"
+                    maxLength={23}
+                    value={formatDisplayId(heldModalInputId)}
+                    onChange={e => setHeldModalInputId(e.target.value.replace(/\D/g, '').slice(0, 17))}
+                    placeholder="2015-2691-2345-67890"
+                    className="formatted-id-input"
+                    style={styles.modalInput}
+                    autoFocus
+                  />
+                  <div style={styles.digitHint}>
+                    <span>{rawHeldId.length} / 17 {t.digitsUnit}</span>
+                    {rawHeldId.length === 17 && <span style={{ color: 'var(--success-dark)', fontWeight: 700 }}>{t.validIdBadge}</span>}
+                  </div>
                 </div>
-              </div>
 
-              <div style={styles.modalActions}>
-                <button
-                  type="button"
-                  onClick={() => setHeldSeatModalNumber(null)}
-                  className="btn btn-outline"
-                  style={{ flex: 1 }}
-                >
-                  {t.cancelBtn}
-                </button>
-                <button
-                  type="submit"
-                  disabled={heldModalInputId.length !== 17 || heldModalChecking}
-                  className="btn btn-primary"
-                  style={{ flex: 2 }}
-                >
-                  {heldModalChecking ? t.verifying : t.verifyResumeBtn}
-                </button>
-              </div>
-            </form>
+                {heldModalError && (
+                  <div style={styles.modalError}>
+                    <span>{heldModalError}</span>
+                  </div>
+                )}
+
+                <div style={styles.modalActions}>
+                  <button
+                    type="button"
+                    onClick={() => setHeldSeatModalNumber(null)}
+                    className="btn btn-outline"
+                    style={{ flex: 1 }}
+                  >
+                    {t.cancelBtn}
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={rawHeldId.length !== 17 || heldModalChecking}
+                    className="btn btn-primary"
+                    style={{ flex: 2 }}
+                  >
+                    {heldModalChecking ? t.verifying : t.verifyResumeBtn}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       )}
@@ -415,178 +527,179 @@ const styles: Record<string, React.CSSProperties> = {
   container: {
     maxWidth: 1240,
     margin: '0 auto',
-    padding: '1.5rem',
-  },
-  topNav: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: '1rem',
-  },
-  backBtn: {
-    padding: '0.45rem 0.9rem',
-    fontSize: '0.85rem',
-    fontWeight: 700,
+    padding: '1.25rem 1rem',
   },
   heroCard: {
-    padding: '1.5rem',
+    padding: '1.25rem 1.5rem',
     marginBottom: '1.25rem',
-    background: '#ffffff',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '1.25rem',
   },
-  heroContent: {
+  heroTopRow: {
     display: 'flex',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    gap: '1.25rem',
-    marginBottom: '1.25rem',
+    alignItems: 'center',
+    gap: '1rem',
     flexWrap: 'wrap',
   },
-  shiftBadgeRow: {
+  backBtn: {
+    padding: '0.45rem 0.85rem',
+    fontSize: '0.825rem',
+    borderRadius: 'var(--radius-md)',
+  },
+  heroTitles: {
     display: 'flex',
-    gap: '0.5rem',
-    alignItems: 'center',
-    marginBottom: '0.35rem',
+    flexDirection: 'column',
+    gap: '0.2rem',
+    flex: '1 1 240px',
   },
   classLevelBadge: {
-    fontSize: '0.75rem',
+    fontSize: '0.725rem',
     fontWeight: 700,
-    background: 'var(--primary-light)',
     color: 'var(--primary)',
-    padding: '0.2rem 0.6rem',
-    borderRadius: 'var(--radius-full)',
     textTransform: 'uppercase',
+    letterSpacing: '0.5px',
   },
   heroTitle: {
-    fontSize: '1.65rem',
+    fontSize: '1.45rem',
     fontWeight: 800,
     color: 'var(--slate-900)',
     letterSpacing: '-0.02em',
     margin: 0,
   },
-  heroRight: {
-    minWidth: 240,
+  heroActionGroup: {
+    flexShrink: 0,
   },
   heroApplyBtn: {
-    padding: '0.75rem 1.25rem',
-    fontSize: '0.95rem',
-    width: '100%',
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '0.55rem',
+    padding: '0.65rem 1.25rem',
+    fontSize: '0.9rem',
+    fontWeight: 700,
+    boxShadow: '0 4px 12px rgba(30, 107, 184, 0.3)',
   },
   userHoldBanner: {
     background: 'var(--warning-light)',
-    border: '1px solid var(--warning-border)',
-    borderRadius: 'var(--radius-md)',
+    border: '1.5px solid var(--warning-border)',
     padding: '0.75rem 1rem',
+    borderRadius: 'var(--radius-lg)',
+    textAlign: 'center',
+    maxWidth: 280,
   },
   userHoldTitle: {
-    fontSize: '0.85rem',
-    fontWeight: 700,
-    color: 'var(--warning-dark)',
     display: 'block',
+    fontSize: '0.85rem',
+    fontWeight: 800,
+    color: 'var(--warning-dark)',
   },
   userHoldSub: {
-    fontSize: '0.75rem',
+    fontSize: '0.725rem',
     color: 'var(--slate-600)',
-    marginTop: '0.15rem',
+    margin: '2px 0 0',
   },
   statPillsRow: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
-    gap: '0.65rem',
+    display: 'flex',
+    gap: '0.75rem',
+    flexWrap: 'wrap',
     borderTop: '1px solid var(--slate-100)',
     paddingTop: '1rem',
   },
   statPillItem: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.5rem',
     background: 'var(--slate-50)',
     border: '1px solid var(--slate-200)',
-    borderRadius: 'var(--radius-md)',
-    padding: '0.6rem 0.85rem',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '0.15rem',
+    padding: '0.35rem 0.85rem',
+    borderRadius: 'var(--radius-full)',
   },
   statPillLabel: {
-    fontSize: '0.7rem',
+    fontSize: '0.725rem',
     fontWeight: 700,
     textTransform: 'uppercase',
     color: 'var(--slate-500)',
   },
   statPillVal: {
-    fontSize: '1.25rem',
+    fontSize: '0.9rem',
     fontWeight: 800,
     fontFamily: 'var(--font-mono)',
-    color: 'var(--slate-900)',
+    color: 'var(--slate-800)',
   },
   errorAlert: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     background: 'var(--danger-light)',
     border: '1px solid var(--danger-border)',
     color: 'var(--danger-dark)',
     padding: '0.75rem 1rem',
     borderRadius: 'var(--radius-md)',
-    marginBottom: '1rem',
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    marginBottom: '1.25rem',
+    fontSize: '0.85rem',
     fontWeight: 600,
-    fontSize: '0.875rem',
   },
   alertClose: {
     background: 'none',
     border: 'none',
     color: 'var(--danger-dark)',
     cursor: 'pointer',
-    fontSize: '0.8rem',
-    fontWeight: 600,
+    fontSize: '0.9rem',
   },
   classroomCard: {
     padding: '1.5rem',
-    background: '#ffffff',
   },
   legendRow: {
     display: 'flex',
+    justifyContent: 'center',
     gap: '1.25rem',
     flexWrap: 'wrap',
     marginBottom: '1.5rem',
-    paddingBottom: '1rem',
-    borderBottom: '1px solid var(--slate-100)',
-  },
-  legendItem: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.45rem',
-    fontSize: '0.8rem',
+    fontSize: '0.825rem',
     color: 'var(--slate-600)',
     fontWeight: 600,
   },
+  legendItem: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '0.45rem',
+  },
   legendDot: {
-    width: 10,
-    height: 10,
+    width: 9,
+    height: 9,
     borderRadius: '50%',
     display: 'inline-block',
   },
   gridContainer: {
     overflowX: 'auto',
-    paddingBottom: '0.5rem',
+    padding: '0.5rem 0 1rem',
   },
   seatGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(auto-fill, minmax(44px, 1fr))',
-    gap: '0.65rem',
-    minWidth: '260px',
+    gap: '0.5rem',
+    minWidth: 320,
+    margin: '0 auto',
   },
   youBadge: {
+    position: 'absolute',
+    top: -5,
+    right: -5,
+    background: '#d97706',
+    color: '#ffffff',
     fontSize: '0.55rem',
     fontWeight: 800,
-    lineHeight: 1,
-    marginTop: '0.1rem',
-    color: '#b45309',
+    padding: '1px 3px',
+    borderRadius: 3,
+    letterSpacing: '0.2px',
   },
   modalHeader: {
-    padding: '1.25rem 1.5rem',
-    borderBottom: '1px solid var(--slate-200)',
     display: 'flex',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    background: 'var(--slate-50)',
+    alignItems: 'flex-start',
+    padding: '1.25rem 1.5rem',
+    borderBottom: '1px solid var(--slate-100)',
   },
   modalTitle: {
     fontSize: '1.15rem',
@@ -597,7 +710,7 @@ const styles: Record<string, React.CSSProperties> = {
   modalSub: {
     fontSize: '0.8rem',
     color: 'var(--slate-500)',
-    marginTop: '0.15rem',
+    margin: '2px 0 0',
   },
   modalClose: {
     background: 'none',
@@ -607,54 +720,67 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: 'pointer',
   },
   modalBody: {
-    padding: '1.5rem',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '1.25rem',
+    padding: '1.25rem 1.5rem',
   },
   modalDesc: {
-    fontSize: '0.875rem',
+    fontSize: '0.825rem',
     color: 'var(--slate-600)',
     lineHeight: 1.5,
-  },
-  modalAlert: {
-    background: 'var(--danger-light)',
-    border: '1px solid var(--danger-border)',
-    color: 'var(--danger-dark)',
-    padding: '0.75rem',
-    borderRadius: 'var(--radius-md)',
-    fontSize: '0.8rem',
-    fontWeight: 600,
+    marginBottom: '1rem',
   },
   field: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '0.4rem',
+    gap: '0.35rem',
+    marginBottom: '0.85rem',
   },
   label: {
-    fontSize: '0.825rem',
+    fontSize: '0.775rem',
     fontWeight: 700,
     color: 'var(--slate-700)',
   },
   modalInput: {
-    padding: '0.75rem 0.9rem',
-    border: '1px solid var(--slate-300)',
+    padding: '0.75rem 1rem',
     borderRadius: 'var(--radius-md)',
-    fontFamily: 'var(--font-mono)',
-    fontSize: '0.95rem',
-    letterSpacing: '0.5px',
+    border: '1.5px solid var(--slate-300)',
     outline: 'none',
   },
   digitHint: {
     display: 'flex',
     justifyContent: 'space-between',
-    fontSize: '0.75rem',
-    color: 'var(--slate-400)',
+    fontSize: '0.725rem',
+    color: 'var(--slate-500)',
     fontFamily: 'var(--font-mono)',
+    marginTop: 2,
+  },
+  checkboxLabel: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.5rem',
+    fontSize: '0.775rem',
+    color: 'var(--slate-600)',
+    cursor: 'pointer',
+    marginBottom: '1.25rem',
+    userSelect: 'none',
+  },
+  checkbox: {
+    cursor: 'pointer',
+    width: 15,
+    height: 15,
   },
   modalActions: {
     display: 'flex',
     gap: '0.75rem',
-    marginTop: '0.5rem',
+    marginTop: '0.75rem',
+  },
+  modalError: {
+    background: 'var(--danger-light)',
+    border: '1px solid var(--danger-border)',
+    color: 'var(--danger-dark)',
+    padding: '0.5rem 0.75rem',
+    borderRadius: 'var(--radius-sm)',
+    fontSize: '0.75rem',
+    fontWeight: 600,
+    marginBottom: '0.85rem',
   },
 };

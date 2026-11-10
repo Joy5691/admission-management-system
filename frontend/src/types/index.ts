@@ -13,6 +13,9 @@ export interface Hold {
   studentId?: string;
   status: 'HELD' | 'CONFIRMED' | 'EXPIRED' | 'CANCELLED';
   expiresAt: string;
+  seatNumber?: number;
+  createdAt?: string;
+  confirmedAt?: string | null;
 }
 
 export interface MyHold extends Hold {
