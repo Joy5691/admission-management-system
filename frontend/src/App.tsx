@@ -273,11 +273,8 @@ function App() {
             <strong>{t.brandName}</strong>
             <span> • {t.brandTag}</span>
           </div>
-          <div style={styles.techBadges}>
-            <span style={styles.techPill}>.NET 10</span>
-            <span style={styles.techPill}>PostgreSQL 16</span>
-            <span style={styles.techPill}>React 18</span>
-            <span style={styles.techPill}>Docker</span>
+          <div style={styles.footerCopy}>
+            © {new Date().getFullYear()} Onnorokom Academy
           </div>
         </div>
       </footer>
@@ -487,20 +484,10 @@ const styles: Record<string, React.CSSProperties> = {
   footerBrand: {
     color: 'var(--slate-600)',
   },
-  techBadges: {
-    display: 'flex',
-    gap: '0.4rem',
-    flexWrap: 'wrap',
-  },
-  techPill: {
-    background: 'var(--slate-100)',
-    border: '1px solid var(--slate-200)',
-    padding: '0.15rem 0.45rem',
-    borderRadius: 'var(--radius-sm)',
-    fontSize: '0.725rem',
-    fontWeight: 600,
-    fontFamily: 'var(--font-mono)',
-    color: 'var(--slate-600)',
+  footerCopy: {
+    fontSize: '0.75rem',
+    color: 'var(--slate-400)',
+    fontWeight: 500,
   },
 };
 

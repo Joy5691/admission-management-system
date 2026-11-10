@@ -697,3 +697,9 @@ body {
     visibility: visible;
   }
 }
+
+/* Search Input Focus */
+.controls-bar-responsive input:focus {
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 3px rgba(30, 107, 184, 0.15) !important;
+}
