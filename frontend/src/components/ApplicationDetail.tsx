@@ -209,7 +209,7 @@ export function ApplicationDetail({ holdId, studentId, lang = 'en', onBack }: Pr
   }
 
   return (
-    <div style={styles.container} className="animate-fade-in">
+    <div style={styles.container} className="animate-fade-in app-detail-container-responsive">
       {/* 3-Step Progress Stepper */}
       <div className="admission-stepper">
         <div className="stepper-step completed">
@@ -308,7 +308,7 @@ export function ApplicationDetail({ holdId, studentId, lang = 'en', onBack }: Pr
               </div>
             )}
 
-            <div style={styles.infoGrid}>
+            <div style={styles.infoGrid} className="info-grid-responsive">
               <div style={styles.infoCell}>
                 <span style={styles.cellLabel}>{t.holdReferenceId}</span>
                 <div style={styles.copyRow}>
@@ -350,7 +350,7 @@ export function ApplicationDetail({ holdId, studentId, lang = 'en', onBack }: Pr
 
             {/* If Confirmed: Student Full Name Entry Card with Button */}
             {effectiveStatus === 'CONFIRMED' && (
-              <div style={styles.nameCard}>
+              <div style={styles.nameCard} className="name-card-responsive">
                 <div style={styles.nameCardHeader}>
                   <div style={styles.nameCardTitleRow}>
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--primary)' }}>
@@ -377,7 +377,7 @@ export function ApplicationDetail({ holdId, studentId, lang = 'en', onBack }: Pr
                     : 'Enter the student full name below and click Save Name to include it on the official admission confirmation slip.'}
                 </p>
 
-                <form onSubmit={handleSaveStudentName} style={styles.nameForm}>
+                <form onSubmit={handleSaveStudentName} style={styles.nameForm} className="name-form-responsive">
                   <div style={styles.nameInputContainer}>
                     <input
                       id="portal-student-name-input"
@@ -389,12 +389,13 @@ export function ApplicationDetail({ holdId, studentId, lang = 'en', onBack }: Pr
                       }}
                       placeholder={lang === 'bn' ? 'যেমন: খালিদ মাহমুদ জয়' : 'e.g. Khalid Mahmud Joy'}
                       style={styles.nameInputField}
+                      className="name-input-field-responsive"
                       autoComplete="name"
                     />
                   </div>
                   <button
                     type="submit"
-                    className="btn btn-primary"
+                    className="btn btn-primary name-save-btn-responsive"
                     style={styles.saveBtn}
                   >
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -444,7 +445,7 @@ export function ApplicationDetail({ holdId, studentId, lang = 'en', onBack }: Pr
                 </div>
 
                 {/* MFS Selector Tabs */}
-                <div style={styles.mfsTabsRow}>
+                <div style={styles.mfsTabsRow} className="mfs-tabs-row-responsive">
                   <button
                     type="button"
                     onClick={() => setSelectedChannel('bkash')}
@@ -514,7 +515,7 @@ export function ApplicationDetail({ holdId, studentId, lang = 'en', onBack }: Pr
                   </div>
                 </div>
 
-                <div style={styles.actions}>
+                <div style={styles.actions} className="payment-actions-responsive">
                   <button
                     onClick={handleCancel}
                     disabled={actionLoading}

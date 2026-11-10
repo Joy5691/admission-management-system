@@ -59,7 +59,7 @@ export function AdmissionSlipModal({
   return createPortal(
     <div className="modal-backdrop" onClick={onClose}>
       <div
-        className="modal-dialog animate-slide-up"
+        className="modal-dialog animate-slide-up slip-modal-dialog-responsive"
         style={styles.modalDialog}
         onClick={(e) => e.stopPropagation()}
       >
@@ -67,9 +67,9 @@ export function AdmissionSlipModal({
         <div id="printable-admission-slip" className="printable-admission-slip" style={styles.outerFrame}>
           <div style={styles.innerFrame}>
             {/* Top 3-Section Header Bar (Matching Sample Slip Format) */}
-            <div style={styles.topHeaderGrid}>
+            <div style={styles.topHeaderGrid} className="slip-header-grid-responsive">
               {/* Left Brand Cell */}
-              <div style={styles.headerLeftCell}>
+              <div style={styles.headerLeftCell} className="slip-header-left-responsive">
                 <div style={styles.logoRow}>
                   <img src="/logo.jpg" alt="Logo" style={styles.brandLogo} />
                   <div>
@@ -81,13 +81,13 @@ export function AdmissionSlipModal({
               </div>
 
               {/* Center Title Cell */}
-              <div style={styles.headerCenterCell}>
+              <div style={styles.headerCenterCell} className="slip-header-center-responsive">
                 <h1 style={styles.mainTitle}>{t.officialAdmissionSlip}</h1>
                 <div style={styles.sessionLine}>{t.academicSession}</div>
               </div>
 
               {/* Right Confidential Cell */}
-              <div style={styles.headerRightCell}>
+              <div style={styles.headerRightCell} className="slip-header-right-responsive">
                 <strong style={styles.confidentialTitle}>CONFIDENTIAL</strong>
                 <div style={styles.confidentialSub}>OFFICIAL RECORD</div>
                 <div style={styles.recordRef}>{refCode}</div>
@@ -95,28 +95,28 @@ export function AdmissionSlipModal({
             </div>
 
             {/* 2-Column Meta Information Grid */}
-            <div style={styles.metaTable}>
+            <div style={styles.metaTable} className="slip-meta-table-responsive">
               {/* Left Column */}
-              <div style={styles.metaColLeft}>
-                <div style={styles.metaRow}>
+              <div style={styles.metaColLeft} className="slip-meta-col-left-responsive">
+                <div style={styles.metaRow} className="slip-meta-row-responsive">
                   <span style={styles.metaField}>{t.studentNameLabel}</span>
                   <span style={styles.metaColon}>:</span>
                   <strong style={styles.nameText}>{displayName}</strong>
                 </div>
 
-                <div style={styles.metaRow}>
+                <div style={styles.metaRow} className="slip-meta-row-responsive">
                   <span style={styles.metaField}>{t.birthCertLabel}</span>
                   <span style={styles.metaColon}>:</span>
                   <strong style={styles.metaValueMono}>{formattedId}</strong>
                 </div>
 
-                <div style={styles.metaRow}>
+                <div style={styles.metaRow} className="slip-meta-row-responsive">
                   <span style={styles.metaField}>{t.studentCategory}</span>
                   <span style={styles.metaColon}>:</span>
                   <span style={styles.metaValue}>{t.regularAdmission}</span>
                 </div>
 
-                <div style={styles.metaRow}>
+                <div style={styles.metaRow} className="slip-meta-row-responsive">
                   <span style={styles.metaField}>{t.admissionDate}</span>
                   <span style={styles.metaColon}>:</span>
                   <span style={styles.metaValue}>{dateStr}</span>
@@ -124,26 +124,26 @@ export function AdmissionSlipModal({
               </div>
 
               {/* Right Column */}
-              <div style={styles.metaColRight}>
-                <div style={styles.metaRow}>
+              <div style={styles.metaColRight} className="slip-meta-col-right-responsive">
+                <div style={styles.metaRow} className="slip-meta-row-responsive">
                   <span style={styles.metaField}>{t.academicClass}</span>
                   <span style={styles.metaColon}>:</span>
                   <strong style={styles.metaValue}>{className}</strong>
                 </div>
 
-                <div style={styles.metaRow}>
+                <div style={styles.metaRow} className="slip-meta-row-responsive">
                   <span style={styles.metaField}>{t.assignedSeat}</span>
                   <span style={styles.metaColon}>:</span>
                   <strong style={styles.seatBadge}>Seat #{hold.seatNumber || 1}</strong>
                 </div>
 
-                <div style={styles.metaRow}>
+                <div style={styles.metaRow} className="slip-meta-row-responsive">
                   <span style={styles.metaField}>{t.holdReferenceId}</span>
                   <span style={styles.metaColon}>:</span>
                   <code style={styles.metaValueMonoSmall}>{hold.holdId.slice(0, 18)}...</code>
                 </div>
 
-                <div style={styles.metaRow}>
+                <div style={styles.metaRow} className="slip-meta-row-responsive">
                   <span style={styles.metaField}>{t.applicationStatus}</span>
                   <span style={styles.metaColon}>:</span>
                   <span style={styles.enrolledPill}>{t.officiallyEnrolledTag}</span>
@@ -253,7 +253,7 @@ export function AdmissionSlipModal({
               </div>
 
               {/* Right: Seal & Authorized Signature */}
-              <div style={styles.signatureCol}>
+              <div style={styles.signatureCol} className="slip-signature-col-responsive">
                 <div style={styles.sealBox}>
                   <div style={styles.sealCircle}>
                     <span style={styles.sealTitle}>ONNOROKOM</span>
@@ -271,7 +271,7 @@ export function AdmissionSlipModal({
         </div>
 
         {/* Modal Action Buttons (Hidden when printing) */}
-        <div className="no-print" style={styles.modalActions}>
+        <div className="no-print slip-modal-actions-responsive" style={styles.modalActions}>
           <button
             type="button"
             onClick={handlePrint}

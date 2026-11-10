@@ -92,130 +92,133 @@ function App() {
 
   return (
     <div style={styles.appShell}>
-      {/* Top Header */}
-      <header style={styles.header}>
-        <div className="top-header-inner">
-          {/* Brand with Onnorokom Logo */}
-          <div className="brand-wrapper" onClick={() => { if (!isAdmin) handleBackToDashboard(); }}>
-            <div style={styles.logoBadge} className="brand-logo-badge">
-              <img
-                src="/logo.jpg"
-                alt="Onnorokom Academy Logo"
-                style={styles.logoImg}
-              />
-            </div>
-            <div className="brand-text-col">
-              <span className="brand-heading">{t.brandName}</span>
-              <span className="brand-subheading">{t.brandTag}</span>
-            </div>
-          </div>
-
-          {/* Right Header Controls: Language Toggle & Admin Login */}
-          <div className="header-right-actions">
-            {/* Language Switcher */}
-            <div style={styles.langToggle}>
-              <button
-                type="button"
-                onClick={() => setLang('en')}
-                className="lang-toggle-btn"
-                style={{
-                  ...styles.langBtn,
-                  background: lang === 'en' ? 'var(--primary)' : 'transparent',
-                  color: lang === 'en' ? '#ffffff' : 'var(--slate-600)',
-                  fontWeight: lang === 'en' ? 700 : 500,
-                }}
-              >
-                EN
-              </button>
-              <button
-                type="button"
-                onClick={() => setLang('bn')}
-                className="lang-toggle-btn"
-                style={{
-                  ...styles.langBtn,
-                  background: lang === 'bn' ? 'var(--primary)' : 'transparent',
-                  color: lang === 'bn' ? '#ffffff' : 'var(--slate-600)',
-                  fontWeight: lang === 'bn' ? 700 : 500,
-                }}
-              >
-                বাং
-              </button>
+      {/* Sticky Top Bar (Contains Header & Navigation) */}
+      <div className="app-top-sticky-bar">
+        {/* Top Header */}
+        <header style={styles.header}>
+          <div className="top-header-inner">
+            {/* Brand with Onnorokom Logo */}
+            <div className="brand-wrapper" onClick={() => { if (!isAdmin) handleBackToDashboard(); }}>
+              <div style={styles.logoBadge} className="brand-logo-badge">
+                <img
+                  src="/logo.jpg"
+                  alt="Onnorokom Academy Logo"
+                  style={styles.logoImg}
+                />
+              </div>
+              <div className="brand-text-col">
+                <span className="brand-heading">{t.brandName}</span>
+                <span className="brand-subheading">{t.brandTag}</span>
+              </div>
             </div>
 
-            {/* Admin Controls */}
-            {isAdmin ? (
-              <div style={styles.adminGroup}>
-                <span
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    background: 'var(--primary-light)',
-                    color: 'var(--primary)',
-                    border: '1px solid var(--primary-border)',
-                    padding: '0.35rem 0.75rem',
-                    borderRadius: 'var(--radius-full)',
-                    fontSize: '0.8rem',
-                    fontWeight: 700,
-                  }}
-                >
-                  {t.adminPortal}
-                </span>
+            {/* Right Header Controls: Language Toggle & Admin Login */}
+            <div className="header-right-actions">
+              {/* Language Switcher */}
+              <div style={styles.langToggle}>
                 <button
                   type="button"
-                  onClick={handleLogout}
-                  className="btn btn-outline btn-admin-header"
+                  onClick={() => setLang('en')}
+                  className="lang-toggle-btn"
                   style={{
-                    padding: '0.35rem 0.85rem',
-                    fontSize: '0.825rem',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.35rem',
+                    ...styles.langBtn,
+                    background: lang === 'en' ? 'var(--primary)' : 'transparent',
+                    color: lang === 'en' ? '#ffffff' : 'var(--slate-600)',
+                    fontWeight: lang === 'en' ? 700 : 500,
                   }}
-                  title={t.logout}
                 >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                    <polyline points="16 17 21 12 16 7"></polyline>
-                    <line x1="21" y1="12" x2="9" y2="12"></line>
-                  </svg>
-                  {t.logout}
+                  EN
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLang('bn')}
+                  className="lang-toggle-btn"
+                  style={{
+                    ...styles.langBtn,
+                    background: lang === 'bn' ? 'var(--primary)' : 'transparent',
+                    color: lang === 'bn' ? '#ffffff' : 'var(--slate-600)',
+                    fontWeight: lang === 'bn' ? 700 : 500,
+                  }}
+                >
+                  বাং
                 </button>
               </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setIsLoginModalOpen(true)}
-                className="btn btn-outline btn-admin-header"
-                style={styles.adminLoginBtn}
-              >
-                <span className="btn-text-full">{t.adminLogin}</span>
-                <span className="btn-text-short">{lang === 'bn' ? 'অ্যাডমিন' : 'Admin'}</span>
-              </button>
-            )}
-          </div>
-        </div>
-      </header>
 
-      {/* Main Navigation Tabs (Hidden when in Admin Portal) */}
-      {!viewingHoldId && !isAdmin && (
-        <nav style={styles.navBar}>
-          <div style={styles.navInner} className="nav-inner-responsive">
-            <TabButton
-              label={t.classesTab}
-              active={activeTab === 'classes'}
-              onClick={() => {
-                setSelectedClassId(null);
-                setActiveTab('classes');
-              }}
-            />
-            <TabButton
-              label={t.myAppsTab}
-              active={activeTab === 'my-applications'}
-              onClick={() => setActiveTab('my-applications')}
-            />
+              {/* Admin Controls */}
+              {isAdmin ? (
+                <div style={styles.adminGroup}>
+                  <span
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      background: 'var(--primary-light)',
+                      color: 'var(--primary)',
+                      border: '1px solid var(--primary-border)',
+                      padding: '0.35rem 0.75rem',
+                      borderRadius: 'var(--radius-full)',
+                      fontSize: '0.8rem',
+                      fontWeight: 700,
+                    }}
+                  >
+                    {t.adminPortal}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="btn btn-outline btn-admin-header"
+                    style={{
+                      padding: '0.35rem 0.85rem',
+                      fontSize: '0.825rem',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.35rem',
+                    }}
+                    title={t.logout}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                      <polyline points="16 17 21 12 16 7"></polyline>
+                      <line x1="21" y1="12" x2="9" y2="12"></line>
+                    </svg>
+                    {t.logout}
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setIsLoginModalOpen(true)}
+                  className="btn btn-outline btn-admin-header"
+                  style={styles.adminLoginBtn}
+                >
+                  <span className="btn-text-full">{t.adminLogin}</span>
+                  <span className="btn-text-short">{lang === 'bn' ? 'অ্যাডমিন' : 'Admin'}</span>
+                </button>
+              )}
+            </div>
           </div>
-        </nav>
-      )}
+        </header>
+
+        {/* Main Navigation Tabs (Hidden when in Admin Portal or viewing application) */}
+        {!viewingHoldId && !isAdmin && (
+          <nav style={styles.navBar}>
+            <div style={styles.navInner} className="nav-inner-responsive">
+              <TabButton
+                label={t.classesTab}
+                active={activeTab === 'classes'}
+                onClick={() => {
+                  setSelectedClassId(null);
+                  setActiveTab('classes');
+                }}
+              />
+              <TabButton
+                label={t.myAppsTab}
+                active={activeTab === 'my-applications'}
+                onClick={() => setActiveTab('my-applications')}
+              />
+            </div>
+          </nav>
+        )}
+      </div>
 
       {/* Main Content Area */}
       <main style={styles.main}>
@@ -323,10 +326,6 @@ const styles: Record<string, React.CSSProperties> = {
   header: {
     background: '#ffffff',
     borderBottom: '1px solid var(--slate-200)',
-    position: 'sticky',
-    top: 0,
-    zIndex: 100,
-    boxShadow: '0 1px 4px rgba(0, 0, 0, 0.04)',
   },
   headerInner: {
     maxWidth: 1240,

@@ -92,13 +92,13 @@ export function ClassList({
   return (
     <div style={styles.container} className="animate-fade-in class-list-container">
       {/* Top Banner */}
-      <div style={styles.headerBanner}>
-        <h1 style={styles.title}>{t.studentAdmissionTitle}</h1>
+      <div style={styles.headerBanner} className="class-header-banner-responsive">
+        <h1 style={styles.title} className="class-title-responsive">{t.studentAdmissionTitle}</h1>
       </div>
 
       {/* Search & Filter Bar */}
       <div style={styles.controlsBar} className="controls-bar-responsive">
-        <div style={styles.searchWrapper}>
+        <div style={styles.searchWrapper} className="search-wrapper-responsive">
           <svg style={styles.searchSvg} viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" strokeWidth="2" fill="none">
             <circle cx="11" cy="11" r="8"></circle>
             <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
@@ -109,16 +109,18 @@ export function ClassList({
             onChange={e => setSearch(e.target.value)}
             placeholder={t.searchPlaceholder}
             style={styles.searchInput}
+            className="search-input-responsive"
           />
           {search && (
             <button onClick={() => setSearch('')} style={styles.clearSearchBtn}>✕</button>
           )}
         </div>
 
-        <div style={styles.filterGroup}>
+        <div style={styles.filterGroup} className="filter-group-responsive">
           <button
             type="button"
             onClick={() => setFilterMode('ALL')}
+            className="filter-btn-responsive"
             style={{
               ...styles.filterBtn,
               background: filterMode === 'ALL' ? 'var(--primary)' : '#ffffff',
@@ -132,6 +134,7 @@ export function ClassList({
           <button
             type="button"
             onClick={() => setFilterMode('OPEN')}
+            className="filter-btn-responsive"
             style={{
               ...styles.filterBtn,
               background: filterMode === 'OPEN' ? 'var(--success-dark)' : '#ffffff',
@@ -174,7 +177,7 @@ export function ClassList({
         </div>
       ) : (
         /* Academic Class Modules Grid */
-        <div style={styles.modulesGrid}>
+        <div style={styles.modulesGrid} className="modules-grid-responsive">
           {filtered.map(c => {
                         const occupancyPct = c.totalSeats > 0 ? Math.round(((c.confirmedSeats + c.heldSeats) / c.totalSeats) * 100) : 0;
             const isMorning = c.name.toLowerCase().includes('morning');
@@ -188,7 +191,7 @@ export function ClassList({
             return (
               <div
                 key={c.id}
-                className="card card-interactive"
+                className="card card-interactive module-card-responsive"
                 style={styles.moduleCard}
                 onClick={() => setSelectedClassId(c.id)}
               >
@@ -201,7 +204,7 @@ export function ClassList({
                 </div>
 
                 {/* Seat Metrics Row */}
-                <div style={styles.seatPillRow}>
+                <div style={styles.seatPillRow} className="seat-pill-row-responsive">
                   <div style={styles.seatPill}>
                     <span style={styles.seatPillLabel}>{t.available}</span>
                     <span style={{ ...styles.seatPillVal, color: 'var(--primary)' }}>
@@ -252,7 +255,7 @@ export function ClassList({
                 <div style={styles.moduleFooter}>
                   <button
                     type="button"
-                    className="btn btn-primary"
+                    className="btn btn-primary view-seats-btn-responsive"
                     style={styles.viewSeatsBtn}
                     onClick={(e) => {
                       e.stopPropagation();

@@ -70,7 +70,7 @@ export function MyApplications({ studentId, lang = 'en', onViewHold, onGoToClass
 
   if (!studentId) {
     return (
-      <div style={styles.container} className="animate-fade-in">
+      <div style={styles.container} className="animate-fade-in my-apps-container-responsive">
         <div style={styles.warnCard} className="card">
           <h3 style={styles.warnTitle}>{t.findApplicationsTitle}</h3>
           <p style={styles.warnText}>{t.findApplicationsNotice}</p>
@@ -150,7 +150,7 @@ export function MyApplications({ studentId, lang = 'en', onViewHold, onGoToClass
   return (
     <div style={styles.container} className="animate-fade-in">
       {/* Top Banner */}
-      <div style={styles.header}>
+      <div style={styles.header} className="my-apps-header-responsive">
         <div>
           <h1 style={styles.title}>{t.myAppsTab}</h1>
           <p style={styles.subtitle}>
@@ -204,7 +204,7 @@ export function MyApplications({ studentId, lang = 'en', onViewHold, onGoToClass
 
       {/* Filter Tabs */}
       {holds.length > 0 && (
-        <div style={styles.filterBar}>
+        <div style={styles.filterBar} className="my-apps-filter-bar-responsive">
           {(['ALL', 'HELD', 'CONFIRMED', 'TERMINAL'] as Filter[]).map(f => (
             <button
               key={f}
@@ -253,7 +253,7 @@ export function MyApplications({ studentId, lang = 'en', onViewHold, onGoToClass
 
       {/* Cards Table List */}
       {filtered.length > 0 && (
-        <div style={styles.list}>
+        <div style={styles.list} className="my-apps-list-responsive">
           {filtered.map((h, idx) => {
             const isHeld = h.status === 'HELD';
             const isConfirmed = h.status === 'CONFIRMED';

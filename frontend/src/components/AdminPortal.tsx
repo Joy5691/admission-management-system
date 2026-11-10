@@ -109,9 +109,9 @@ export function AdminPortal({ onViewClassSeatMap, onLogout }: AdminPortalProps) 
   const totalAvailable = classes.reduce((sum, c) => sum + c.availableSeats, 0);
 
   return (
-    <div style={styles.container} className="animate-fade-in">
+    <div style={styles.container} className="animate-fade-in admin-container-responsive">
       {/* Top Banner */}
-      <div style={styles.topHeader}>
+      <div style={styles.topHeader} className="admin-header-responsive">
         <div>
           <h1 style={styles.title}>Admin Admission & Shift Management</h1>
         </div>
@@ -122,7 +122,7 @@ export function AdminPortal({ onViewClassSeatMap, onLogout }: AdminPortalProps) 
       </div>
 
       {/* Global Stat Metrics */}
-      <div style={styles.metricsGrid}>
+      <div style={styles.metricsGrid} className="admin-metrics-grid-responsive">
         <div className="card" style={styles.metricCard}>
           <span style={styles.metricLabel}>Total Classes</span>
           <span style={styles.metricVal}>{classes.length}</span>
@@ -146,9 +146,9 @@ export function AdminPortal({ onViewClassSeatMap, onLogout }: AdminPortalProps) 
       </div>
 
       {/* Main Split: Form on Left, Live Shift Roster on Right */}
-      <div style={styles.mainGrid}>
+      <div style={styles.mainGrid} className="admin-main-grid-responsive">
         {/* Left Column: Create Class & Shift Form */}
-        <div className="card" style={styles.cardSection}>
+        <div className="card admin-form-card-responsive" style={styles.cardSection}>
           <div style={styles.cardHeader}>
             <h2 style={styles.cardTitle}>Create Class & Shift</h2>
           </div>
@@ -177,7 +177,7 @@ export function AdminPortal({ onViewClassSeatMap, onLogout }: AdminPortalProps) 
               <select
                 value={selectedClassLevel}
                 onChange={(e) => setSelectedClassLevel(e.target.value)}
-                style={styles.select}
+                style={styles.select} className="admin-select-responsive"
               >
                 {CLASS_OPTIONS.map((lvl) => (
                   <option key={lvl} value={lvl}>{lvl}</option>
@@ -193,7 +193,7 @@ export function AdminPortal({ onViewClassSeatMap, onLogout }: AdminPortalProps) 
                   value={customClassName}
                   onChange={(e) => setCustomClassName(e.target.value)}
                   placeholder="e.g. Higher Secondary Science"
-                  style={styles.input}
+                  style={styles.input} className="admin-input-responsive"
                 />
               </div>
             )}

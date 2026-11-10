@@ -233,7 +233,7 @@ export function ClassSeatMap({
   return (
     <div style={styles.container} className="animate-fade-in seat-map-container">
       {/* 3-Step Progress Stepper */}
-      <div className="admission-stepper">
+      <div className="admission-stepper admission-stepper-responsive">
         <div className="stepper-step active">
           <span className="stepper-bubble">1</span>
           <span>{t.step1Title}</span>
@@ -251,13 +251,13 @@ export function ClassSeatMap({
       </div>
 
       {/* Top Header Card */}
-      <div className="card" style={styles.heroCard}>
-        <div style={styles.heroTopRow}>
+      <div className="card hero-card-responsive" style={styles.heroCard}>
+        <div style={styles.heroTopRow} className="hero-top-row-responsive">
           <button onClick={onBack} className="btn btn-outline" style={styles.backBtn} type="button">
             {t.backToClasses}
           </button>
 
-          <div style={styles.heroTitles}>
+          <div style={styles.heroTitles} className="hero-titles-responsive">
             <span style={styles.classLevelBadge}>{t.academicClass}</span>
             <h1 style={styles.heroTitle}>{currentClass.name}</h1>
           </div>
@@ -281,7 +281,7 @@ export function ClassSeatMap({
                 type="button"
                 onClick={handleAutoAssign}
                 disabled={availableSeats === 0 || applying}
-                className="btn btn-primary"
+                className="btn btn-primary hero-apply-btn-responsive"
                 style={styles.heroApplyBtn}
                 title={t.autoAssignTooltip}
               >
@@ -295,7 +295,7 @@ export function ClassSeatMap({
         </div>
 
         {/* Global Class Stat Pills */}
-        <div style={styles.statPillsRow}>
+        <div style={styles.statPillsRow} className="stat-pills-row-responsive">
           <div style={styles.statPillItem}>
             <span style={styles.statPillLabel}>{t.total}</span>
             <span style={styles.statPillVal}>{totalSeats}</span>
@@ -323,9 +323,9 @@ export function ClassSeatMap({
       )}
 
       {/* Classroom Visualization Card */}
-      <div className="card" style={styles.classroomCard}>
+      <div className="card classroom-card-responsive" style={styles.classroomCard}>
         {/* Modern Clean Legend with Dots */}
-        <div style={styles.legendRow}>
+        <div style={styles.legendRow} className="legend-row-responsive">
           <div style={styles.legendItem}>
             <span style={{ ...styles.legendDot, background: 'var(--primary)' }} />
             <span>{t.legendAvailable}</span>
@@ -345,8 +345,8 @@ export function ClassSeatMap({
         </div>
 
         {/* Responsive Seat Grid */}
-        <div style={styles.gridContainer}>
-          <div style={styles.seatGrid}>
+        <div style={styles.gridContainer} className="grid-container-responsive">
+          <div style={styles.seatGrid} className="seat-grid-responsive">
             {seats.map(({ seatNum, status, isUserHeld }) => (
               <button
                 key={seatNum}

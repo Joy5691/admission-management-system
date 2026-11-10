@@ -424,38 +424,57 @@ body {
   display: inline;
 }
 
-/* Mobile & Tablet Responsive Header Rules */
+/* ============================================================
+   Comprehensive Mobile & Tablet Responsive Engine
+   Optimized for 320px - 640px (iPhone SE, 13/14/15/16, Android)
+============================================================ */
+
+@media (max-width: 860px) {
+  .admin-main-grid-responsive {
+    grid-template-columns: 1fr !important;
+    gap: 1.25rem !important;
+  }
+}
+
 @media (max-width: 640px) {
+  /* 1. Top Header & Nav */
   .top-header-inner {
-    padding: 0.45rem 0.65rem;
-    gap: 0.4rem;
+    padding: 0.5rem 0.75rem !important;
+    gap: 0.45rem !important;
   }
   .brand-wrapper {
-    gap: 0.45rem;
+    gap: 0.5rem !important;
+    min-width: 0 !important;
   }
   .brand-logo-badge {
-    width: 30px !important;
-    height: 30px !important;
+    width: 32px !important;
+    height: 32px !important;
     border-radius: var(--radius-sm) !important;
+    flex-shrink: 0 !important;
   }
   .brand-heading {
-    font-size: 0.825rem !important;
-    letter-spacing: -0.01em;
+    font-size: 0.85rem !important;
+    font-weight: 800 !important;
+    letter-spacing: -0.01em !important;
+    line-height: 1.2 !important;
   }
   .brand-subheading {
     display: none !important;
   }
   .header-right-actions {
-    gap: 0.35rem;
+    gap: 0.35rem !important;
+    flex-shrink: 0 !important;
   }
   .btn-admin-header {
-    padding: 0.325rem 0.55rem !important;
+    padding: 0.35rem 0.65rem !important;
     font-size: 0.75rem !important;
+    font-weight: 700 !important;
     border-radius: var(--radius-sm) !important;
   }
   .lang-toggle-btn {
-    padding: 0.2rem 0.35rem !important;
-    font-size: 0.675rem !important;
+    padding: 0.225rem 0.45rem !important;
+    font-size: 0.7rem !important;
+    font-weight: 700 !important;
   }
   .btn-text-full {
     display: none !important;
@@ -464,34 +483,319 @@ body {
     display: inline !important;
   }
   .nav-inner-responsive {
-    padding: 0 0.65rem !important;
-    gap: 0.15rem !important;
+    padding: 0 0.5rem !important;
+    gap: 0 !important;
+    width: 100% !important;
   }
   .tab-btn-responsive {
-    padding: 0.55rem 0.65rem !important;
-    font-size: 0.775rem !important;
+    flex: 1 1 0 !important;
+    justify-content: center !important;
+    text-align: center !important;
+    padding: 0.65rem 0.5rem !important;
+    font-size: 0.825rem !important;
+    font-weight: 700 !important;
   }
+
+  /* 2. Student Admission Class List */
   .class-list-container {
-    padding: 0.75rem !important;
+    padding: 0.85rem 0.75rem !important;
+  }
+  .class-header-banner-responsive {
+    margin-bottom: 0.75rem !important;
+  }
+  .class-title-responsive {
+    font-size: 1.35rem !important;
+    margin-bottom: 0.25rem !important;
   }
   .controls-bar-responsive {
     flex-direction: column !important;
     align-items: stretch !important;
     gap: 0.65rem !important;
+    margin-bottom: 1rem !important;
+  }
+  .search-wrapper-responsive {
+    max-width: 100% !important;
+    flex: 1 1 auto !important;
+    width: 100% !important;
+  }
+  .search-input-responsive {
+    height: 44px !important;
+    font-size: 16px !important; /* Prevents auto-zoom in mobile Safari */
+    padding: 0.6rem 2.2rem 0.6rem 2.45rem !important;
+    box-sizing: border-box !important;
+  }
+  .filter-group-responsive {
+    display: flex !important;
+    width: 100% !important;
+    gap: 0.5rem !important;
+  }
+  .filter-btn-responsive {
+    flex: 1 1 0 !important;
+    justify-content: center !important;
+    text-align: center !important;
+    height: 42px !important;
+    font-size: 0.8rem !important;
+    padding: 0.5rem 0.25rem !important;
+  }
+  .modules-grid-responsive {
+    grid-template-columns: 1fr !important;
+    gap: 0.85rem !important;
+  }
+  .module-card-responsive {
+    padding: 1rem !important;
+  }
+  .seat-pill-row-responsive {
+    grid-template-columns: repeat(4, 1fr) !important;
+    padding: 0.45rem 0.35rem !important;
+    gap: 0.25rem !important;
+  }
+  .seat-pill-row-responsive span:first-child {
+    font-size: 0.625rem !important;
+  }
+  .seat-pill-row-responsive span:last-child {
+    font-size: 1rem !important;
+    font-weight: 800 !important;
+  }
+  .view-seats-btn-responsive {
+    width: 100% !important;
+    height: 44px !important;
+    font-size: 0.925rem !important;
+    font-weight: 700 !important;
+    border-radius: var(--radius-md) !important;
+  }
+
+  /* 3. Class Seat Map */
+  .seat-map-container {
+    padding: 0.75rem !important;
+  }
+  .admission-stepper-responsive {
+    padding: 0.45rem 0.55rem !important;
+    gap: 0.35rem !important;
+    margin-bottom: 0.85rem !important;
+    font-size: 0.725rem !important;
+  }
+  .admission-stepper-responsive .stepper-step span:not(.stepper-bubble) {
+    font-size: 0.725rem !important;
+  }
+  .admission-stepper-responsive .stepper-connector {
+    flex: 0 0 8px !important;
+  }
+  .hero-card-responsive {
+    padding: 1rem !important;
+    margin-bottom: 1rem !important;
+  }
+  .hero-top-row-responsive {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0.75rem !important;
+  }
+  .hero-titles-responsive h1 {
+    font-size: 1.35rem !important;
+  }
+  .hero-apply-btn-responsive {
+    width: 100% !important;
+    height: 44px !important;
+    font-size: 0.925rem !important;
+    justify-content: center !important;
+  }
+  .stat-pills-row-responsive {
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 0.35rem !important;
+    padding: 0.35rem !important;
+  }
+  .classroom-card-responsive {
+    padding: 0.85rem !important;
+  }
+  .legend-row-responsive {
+    gap: 0.45rem 0.75rem !important;
+    font-size: 0.75rem !important;
+    justify-content: center !important;
+  }
+  .grid-container-responsive {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    padding: 0.35rem 0 !important;
+  }
+  .seat-grid-responsive {
+    grid-template-columns: repeat(auto-fill, minmax(36px, 1fr)) !important;
+    gap: 6px !important;
+  }
+  .seat-grid-responsive .seat-button {
+    width: 36px !important;
+    height: 36px !important;
+    font-size: 0.725rem !important;
+    border-radius: 6px !important;
+  }
+
+  /* 4. Application Detail & Payment Screen */
+  .app-detail-container-responsive {
+    padding: 0.75rem 0.5rem !important;
+  }
+  .info-grid-responsive {
+    grid-template-columns: 1fr !important;
+    gap: 0.65rem !important;
+  }
+  .name-card-responsive {
+    padding: 1rem !important;
+  }
+  .name-form-responsive {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0.65rem !important;
+  }
+  .name-input-field-responsive {
+    height: 46px !important;
+    font-size: 16px !important;
+  }
+  .name-save-btn-responsive {
+    width: 100% !important;
+    height: 44px !important;
+    justify-content: center !important;
+  }
+  .mfs-tabs-row-responsive {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 0.5rem !important;
+  }
+  .mfs-tabs-row-responsive button {
+    height: 44px !important;
+    font-size: 0.85rem !important;
+  }
+  .payment-actions-responsive {
+    flex-direction: column-reverse !important;
+    align-items: stretch !important;
+    gap: 0.65rem !important;
+  }
+  .payment-actions-responsive button {
+    width: 100% !important;
+    height: 46px !important;
+  }
+
+  /* 5. Admission Slip Modal */
+  .slip-modal-dialog-responsive {
+    width: calc(100vw - 16px) !important;
+    max-width: 100% !important;
+    padding: 0.65rem !important;
+    margin: 8px auto !important;
+    border-radius: 8px !important;
+  }
+  .slip-header-grid-responsive {
+    grid-template-columns: 1fr !important;
+  }
+  .slip-header-left-responsive {
+    border-right: none !important;
+    border-bottom: 1.5px solid #1e293b !important;
+    text-align: center !important;
+    align-items: center !important;
+    padding: 0.6rem !important;
+  }
+  .slip-header-center-responsive {
+    padding: 0.65rem 0.5rem !important;
+  }
+  .slip-header-center-responsive h1 {
+    font-size: 1.05rem !important;
+  }
+  .slip-header-right-responsive {
+    border-left: none !important;
+    border-top: 1.5px solid #1e293b !important;
+    padding: 0.45rem !important;
+  }
+  .slip-meta-table-responsive {
+    grid-template-columns: 1fr !important;
+  }
+  .slip-meta-col-left-responsive {
+    border-right: none !important;
+    border-bottom: 1.5px solid #1e293b !important;
+    padding: 0.6rem 0.65rem !important;
+  }
+  .slip-meta-col-right-responsive {
+    padding: 0.6rem 0.65rem !important;
+  }
+  .slip-meta-row-responsive {
+    grid-template-columns: 110px 12px 1fr !important;
+    font-size: 0.775rem !important;
+  }
+  .slip-verification-row-responsive {
+    grid-template-columns: 1fr !important;
+  }
+  .slip-qr-col-responsive {
+    border-right: none !important;
+    border-bottom: 1.5px solid #1e293b !important;
+    padding: 0.65rem !important;
+  }
+  .slip-signature-col-responsive {
+    padding: 0.75rem !important;
+    text-align: center !important;
+  }
+  .slip-modal-actions-responsive {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0.5rem !important;
+  }
+  .slip-modal-actions-responsive button {
+    width: 100% !important;
+    height: 44px !important;
+    justify-content: center !important;
+  }
+
+  /* 6. Admin Portal */
+  .admin-container-responsive {
+    padding: 0.85rem 0.75rem !important;
+  }
+  .admin-header-responsive {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 0.65rem !important;
+  }
+  .admin-header-responsive h1 {
+    font-size: 1.35rem !important;
+  }
+  .admin-metrics-grid-responsive {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 0.65rem !important;
+    margin-bottom: 1.25rem !important;
+  }
+  .admin-form-card-responsive, .admin-roster-card-responsive {
+    padding: 1rem !important;
+  }
+  .admin-select-responsive, .admin-input-responsive {
+    font-size: 16px !important;
+    height: 44px !important;
+  }
+
+  /* 7. My Applications */
+  .my-apps-container-responsive {
+    padding: 0.85rem 0.75rem !important;
+  }
+  .my-apps-header-responsive {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 0.65rem !important;
+  }
+  .my-apps-grid-responsive {
+    grid-template-columns: 1fr !important;
+    gap: 0.85rem !important;
   }
 }
 
+/* Extra Small Mobile Screens (iPhone SE, 320px - 360px) */
 @media (max-width: 360px) {
   .top-header-inner {
-    padding: 0.4rem 0.45rem;
-    gap: 0.25rem;
+    padding: 0.4rem 0.5rem !important;
+    gap: 0.35rem !important;
   }
   .brand-heading {
-    font-size: 0.75rem !important;
+    font-size: 0.78rem !important;
   }
   .btn-admin-header {
-    padding: 0.25rem 0.45rem !important;
+    padding: 0.3rem 0.45rem !important;
     font-size: 0.7rem !important;
+  }
+  .seat-pill-row-responsive {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 0.35rem !important;
+  }
+  .admin-metrics-grid-responsive {
+    grid-template-columns: 1fr !important;
   }
 }
 
@@ -756,4 +1060,14 @@ body {
 #portal-student-name-input:focus {
   border-color: var(--primary) !important;
   box-shadow: 0 0 0 3px rgba(30, 107, 184, 0.18) !important;
+}
+
+/* Sticky Top Bar (Contains Header & Navigation) */
+.app-top-sticky-bar {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  background: #ffffff;
+  border-bottom: 1px solid var(--slate-200);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
 }
